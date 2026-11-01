@@ -38,9 +38,9 @@ Item {
             id: field
             width: parent.width - sortChip.width - parent.spacing
             height: 34
-            color: Theme.raise2
-            border.width: filterInput.activeFocus ? 1 : 0
-            border.color: Theme.dim
+            // индикация фокуса — сменой фона (QTBUG-137166: border.width: 0)
+            color: filterInput.activeFocus ? Theme.raise2 : Theme.raise
+            border.width: 0
 
             TextInput {
                 id: filterInput
@@ -154,7 +154,11 @@ Item {
 
                     readonly property var rec: modelData
                     readonly property bool hot: rec.cpu >= 20
-                    readonly property bool hovered: ma.containsMouse && !rec.killing
+                    // HoverHandler пассивен: hover строки ловит, клики kill-кнопке
+                    // не мешает (конвенция T3 — вместо строкового MouseArea поверх Row)
+                    readonly property bool hovered: hoverHandler.hovered && !rec.killing
+
+                    HoverHandler { id: hoverHandler }
 
                     width: parent.width
                     height: root.rowH
@@ -255,12 +259,8 @@ Item {
                         }
                     }
 
-                    MouseArea {
-                        id: ma
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        // hover-детект; клики уходят в kill-кнопку
-                    }
+                    // hover строки — пассивный HoverHandler (выше); строковый MouseArea
+                    // не используется, чтобы не съедать клики kill-кнопки
                 }
             }
         }

@@ -17,8 +17,7 @@ Item {
     property string panelId: ""
 
     readonly property bool gpuOk: SysMon.gpuPresent
-    readonly property real sparkW: 204        // 228 − pad 12×2
-    readonly property int sparkH: 20
+    readonly property int sparkH: 14          // proto: спарклайн 14px (ANALYSIS 5.3)
 
     // ---------------------------------------------------------------- метрики
     // Ячейка 228×92: raise, pad 10/12, gap 6 (ANALYSIS 5.3 .metric)
@@ -58,6 +57,7 @@ Item {
             }
 
             Item {                             // значение 15 + юнит 9
+                id: valRow
                 width: parent.width
                 height: 18
                 Text {
@@ -80,42 +80,6 @@ Item {
                 }
             }
 
-            // спарклайн-гистограмма cpu: histLen столбиков по cpuHist; новый столбик
-            // fade-in 200ms (Motion.sparkIn). Высоты 0 — 1px «пол» (не NaN/не 0-высота)
-            Item {
-                width: parent.width
-                height: cell.spark ? root.sparkH : 0
-                visible: cell.spark
-
-                readonly property int n: SysMon.histLen
-                readonly property int barW: 4
-                readonly property int gap: 2
-                readonly property int filled: SysMon.cpuHist.length
-
-                Repeater {
-                    model: parent.n
-
-                    Rectangle {
-                        required property int index
-                        x: index * (parent.barW + parent.gap)
-                        anchors.bottom: parent.bottom
-                        width: parent.barW
-                        height: Math.max(1, Math.round(
-                            (SysMon.cpuHist[index] || 0) * root.sparkH))
-                        // fade-in нового столбца: его «появление» = рост filled за index
-                        opacity: index < parent.filled ? 1 : 0
-                        Behavior on opacity {
-                            NumberAnimation {
-                                duration: Motion.sparkIn
-                                easing.type: Easing.Bezier
-                                easing.bezierCurve: Motion.apple
-                            }
-                        }
-                        color: (SysMon.cpuHist[index] || 0) >= 0.6 ? Theme.txt : Theme.txt2
-                    }
-                }
-            }
-
             Text {                             // подпись 9 dim (модель · °C …)
                 width: parent.width
                 text: cell.caption
@@ -128,6 +92,47 @@ Item {
             Kit.SegBar {
                 width: parent.width
                 value: cell.barValue
+            }
+        }
+
+        // спарклайн-cpu — ВНЕ потока Column (R1): верхняя правая четверть ячейки,
+        // рядом со значением. Гистограмма последних 12 значений cpuHist (proto:
+        // 12 столбиков, h 14); новый столбик fade-in 200ms (Motion.sparkIn).
+        Item {
+            visible: cell.spark
+            anchors.right: parent.right
+            anchors.rightMargin: 12
+            anchors.verticalCenter: valRow.verticalCenter
+            width: 70                          // 12 × (4 + 2) − 2
+            height: root.sparkH
+
+            readonly property int shown: 12
+            readonly property int barW: 4
+            readonly property int gap: 2
+            readonly property int filled: Math.min(shown, SysMon.cpuHist.length)
+
+            Repeater {
+                model: parent.shown
+
+                Rectangle {
+                    required property int index
+                    x: index * (parent.barW + parent.gap)
+                    anchors.bottom: parent.bottom
+                    width: parent.barW
+                    height: Math.max(1, Math.round(
+                        (SysMon.cpuHist[SysMon.cpuHist.length - parent.shown + index] || 0)
+                        * root.sparkH))
+                    opacity: index < parent.filled ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.sparkIn
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Motion.apple
+                        }
+                    }
+                    color: (SysMon.cpuHist[SysMon.cpuHist.length - parent.shown + index] || 0) >= 0.6
+                           ? Theme.txt : Theme.txt2
+                }
             }
         }
     }
@@ -229,7 +234,7 @@ Item {
                 value: root.gpuOk ? (SysMon.vramUsedMb >= 1024
                        ? (SysMon.vramUsedMb / 1024).toFixed(1) + " / " + (SysMon.vramTotalMb / 1024).toFixed(0)
                        : SysMon.vramUsedMb + " / " + SysMon.vramTotalMb) : "—"
-                unit: root.gpuOk ? "G" : ""
+                unit: root.gpuOk ? (SysMon.vramUsedMb >= 1024 ? "G" : "M") : ""
                 caption: root.gpuOk ? "gpu memory" : "no gpu device"
                 barValue: SysMon.vram
                 ghost: !root.gpuOk

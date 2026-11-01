@@ -16,7 +16,6 @@ Rectangle {
 
     property string text: ""
     property bool primary: false
-    property bool enabled: true
     signal clicked()
 
     readonly property bool hovered: ma.containsMouse && root.enabled

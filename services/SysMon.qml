@@ -156,7 +156,7 @@ Singleton {
     }
 
     Timer {
-        interval: 1500
+        interval: 2000                             // SPEC §8: /proc-поллинг 2s
         running: true
         repeat: true
         onTriggered: {
@@ -164,20 +164,20 @@ Singleton {
             memFile.reload()
             uptimeFile.reload()
             loadFile.reload()
-            if (++root._slowTick >= 10) {          // ~15s — батарея/AC
+            if (++root._slowTick >= 8) {           // ~16s — батарея/AC
                 root._slowTick = 0
                 batCapFile.reload()
                 batStatFile.reload()
                 acFile.reload()
             }
-            if (++root._netTick >= 20) {           // ~30s — сеть (ip -brief)
+            if (++root._netTick >= 15) {           // ~30s — сеть (ip -brief)
                 root._netTick = 0
                 ipProc.exec(ipProc.command)
             }
         }
     }
-    property int _slowTick: 9     // первый же тик — читаем батарею
-    property int _netTick: 19     // и сеть
+    property int _slowTick: 7     // первый же тик — читаем батарею
+    property int _netTick: 14     // и сеть
 
     // --------------------------------------------------------------- battery
     function _findSupply(kind) {
@@ -284,14 +284,14 @@ Singleton {
             onRead: data => root._parseGpu(data)
         }
         onExited: {
-            // -l 5 сам не выходит; выход без единой строки = бинаря нет/не смог
-            if (root._gpuLines === 0) {
-                root._gpuDead = true
-                root.gpuPresent = false
+            // -l 5 сам не выходит: выход = мониторинг кончился → ghost (не замороженные
+            // нули); рестарт не делаем — _gpuDead навсегда
+            root._gpuDead = true
+            root.gpuPresent = false
+            if (root._gpuLines === 0)
                 console.info("[SysMon] nvidia-smi завершился без строк — gpu/vram ghost")
-            } else {
-                console.warn("[SysMon] nvidia-smi завершился")
-            }
+            else
+                console.warn("[SysMon] nvidia-smi завершился — gpu/vram ghost")
         }
         Component.onDestruction: if (gpuProc.running) gpuProc.signal(15)
     }

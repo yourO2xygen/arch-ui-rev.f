@@ -42,7 +42,7 @@ Singleton {
             const r = root.procs[i]
             if (f.length > 0
                 && r.name.toLowerCase().indexOf(f) === -1
-                && r.user.indexOf(f) === -1
+                && r.user.toLowerCase().indexOf(f) === -1
                 && String(r.pid).indexOf(f) === -1) continue
             out.push(r)
         }
@@ -133,6 +133,15 @@ Singleton {
     function kill(pid) {
         const rec = root._byPid[pid]
         if (rec) {
+            if (killProc.running) {
+                // одноразовый killProc ещё занят предыдущим вызовом: не теряем молча —
+                // откатываем флаг (строка не должна фейдить без реального SIGTERM)
+                rec.killing = false
+                root._dProcs = true
+                root._queueFlush()
+                console.warn("[ProcMon] kill(" + pid + ") отложен: killProc занят")
+                return
+            }
             rec.killing = true
             rec.killAt = Date.now()
             root._dProcs = true

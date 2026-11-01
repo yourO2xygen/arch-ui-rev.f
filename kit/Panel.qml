@@ -25,6 +25,7 @@
 
 import QtQuick
 import Quickshell
+import Quickshell.Wayland
 import ".."
 
 // Motion.apple в канонической записи (см. комментарий в Motion.qml).
@@ -67,6 +68,9 @@ PanelWindow {
 
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
+    // Клавиатура — по клику в панель (фильтры/поля T5+); хоткеи Hyprland не страдают.
+    // Exclusive придёт лаунчеру в T7.
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     visible: false
 
     mask: Region {
