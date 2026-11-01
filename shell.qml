@@ -174,7 +174,8 @@ ShellRoot {
     }
 
     // ------------------------------------------------------------- CALENDAR
-    // Персистентен по требованию пользователя (SPEC §2); режимы idle-dim/чип — задача 3.
+    // Персистентен (SPEC §2). Свертывание до чипа 264×40 — живое состояние
+    // (components/Calendar.qml, не персистится); высота окна едет за ним.
     PanelWindow {
         id: calendar
         WlrLayershell.namespace: "archui:calendar"
@@ -182,7 +183,14 @@ ShellRoot {
         margins.left: 24
         margins.top: 24
         implicitWidth: 264
-        implicitHeight: 288
+        implicitHeight: calendarContent.collapsed ? 40 : 288
+        Behavior on implicitHeight {
+            NumberAnimation {
+                duration: 260
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Motion.apple
+            }
+        }
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         mask: Region { width: calendar.width; height: calendar.height }
@@ -191,20 +199,14 @@ ShellRoot {
             anchors.fill: parent
             color: Theme.surface
             border.width: 0
-
-            Text {
-                anchors.centerIn: parent
-                text: "CALENDAR"
-                color: Theme.dim
-                font.family: Theme.font
-                font.pixelSize: 11
-                font.letterSpacing: 2
-            }
         }
+
+        Calendar { id: calendarContent; anchors.fill: parent }
     }
 
     // ------------------------------------------------------------------ BAR
-    // Транзиент 2.8s — задача 3; сейчас — IPC-тоггл. ~500×44 top-center.
+    // Транзиент: автоскрытие Motion.barTimeout (hover-hold, рестарт по toggleBar)
+    // живёт в components/StatusBar.qml. 500×44 top-center.
     PanelWindow {
         id: bar
         WlrLayershell.namespace: "archui:bar"
@@ -222,16 +224,9 @@ ShellRoot {
             anchors.fill: parent
             color: Theme.surface
             border.width: 0
-
-            Text {
-                anchors.centerIn: parent
-                text: "BAR"
-                color: Theme.dim
-                font.family: Theme.font
-                font.pixelSize: 11
-                font.letterSpacing: 2
-            }
         }
+
+        StatusBar { id: statusBar; anchors.fill: parent }
     }
 
     // --------------------------------------------------------------- TOASTS

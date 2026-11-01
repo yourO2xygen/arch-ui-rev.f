@@ -2,3 +2,5 @@ singleton Theme 1.0 Theme.qml
 singleton Motion 1.0 Motion.qml
 singleton LayoutState 1.0 services/LayoutState.qml
 Placeholder 1.0 components/Placeholder.qml
+StatusBar 1.0 components/StatusBar.qml
+Calendar 1.0 components/Calendar.qml

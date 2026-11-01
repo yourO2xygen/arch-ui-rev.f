@@ -74,6 +74,13 @@ Singleton {
         console.info("[archui] bar " + (persist.barOpen ? "open" : "closed"))
     }
 
+    // Автоскрытие бара по таймауту (Motion.barTimeout, зовёт components/StatusBar).
+    function closeBar() {
+        if (!persist.barOpen) return
+        persist.barOpen = false
+        console.info("[archui] bar closed (timeout)")
+    }
+
     function dismissToasts() {
         // Задача 3 (NotifStore): сброс стека тостов. Пока каркас — лог.
         console.info("[archui] dismissToasts: stub (задача 3)")
