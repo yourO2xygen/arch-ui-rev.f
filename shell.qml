@@ -725,6 +725,9 @@ ShellRoot {
         function toggleBar(): void { LayoutState.toggleBar() }
         function dismissToasts(): void { NotifStore.dismissAll() }
         function dnd(on: bool): void { LayoutState.setDnd(on) }
+        // Хоткеи SPEC §12: тумблеры (бинд не знает текущего состояния)
+        function dndToggle(): void { LayoutState.setDnd(!LayoutState.dnd) }
+        function toggleCalendar(): void { calendarContent.collapsed = !calendarContent.collapsed }
 
     }
 
