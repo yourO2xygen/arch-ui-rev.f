@@ -382,6 +382,8 @@ Singleton {
             const idx = root.toasts.indexOf(rec)
             if (idx > 0) { root.toasts.splice(idx, 1); root.toasts.unshift(rec) }
             _touchToasts()
+        } else if (rec.state === "pending") {
+            _touchPending()   // ревью T4 раунд 2 minor 3: был безусловный _touchHistory
         } else {
             _touchHistory()
         }
@@ -515,9 +517,14 @@ Singleton {
 
     // → история. Transient в историю не пишется вовсе: записи нет ни в тостах, ни в
     // списке истории — живой объект отпускаем сразу, иначе Retainable.lock висит вечно
-    // (ревью T4, Important 3б)
+    // (ревью T4, Important 3б). Гвард от повторного входа: Notification.expire() →
+    // closed эмитится СИНХРОННО — к моменту возврата expire() запись уже может быть
+    // отретирена каскадом _onClosed (ревью T4, раунд 2 Important 1 — без гварда дубль
+    // uid в ScriptModel и стек из 5).
     function _retireToHistory(rec) {
+        if (rec.state === "history") return
         rec.state = "history"
+        rec.time = Date.now()   // свежесть для dup/replace считается от входа в историю
         if (rec.transient) { _release(rec); return }
         _pushHistory(rec)
     }
@@ -670,6 +677,7 @@ Singleton {
             if (typeof o.time !== "number" || isNaN(o.time) || o.time <= 0) continue
             if (typeof o.id !== "number" || isNaN(o.id)) continue
             if (now - o.time > root.historyTtlMs) continue   // TTL 7д
+            const u = o.urgency === 0 || o.urgency === 1 || o.urgency === 2 ? o.urgency : 1   // minor 4
             recs.push({
                 uid: ++root._uidSeq,
                 bootId: 0,               // чужой процесс: в replace/дедупе не участвует
@@ -680,7 +688,7 @@ Singleton {
                 image: "",
                 summary: o.summary,
                 body: o.body,
-                urgency: o.urgency,
+                urgency: u,
                 transient: false,
                 time: o.time,
                 timeout: -1,

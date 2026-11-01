@@ -386,3 +386,4 @@ ShellRoot {
         onPressed: LayoutState.toggle("launcher")
     }
 }
+
