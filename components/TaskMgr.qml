@@ -33,53 +33,11 @@ Item {
         anchors.right: parent.right
         spacing: 8
 
-        // Поле: h34, фон raise2, каретка «_» 8×2 (Motion.caretBlink). kit/Field — T7.
-        Rectangle {
-            id: field
+        // Поле: h34, фон raise (focus raise2), каретка 8×2 (Motion.caretBlink) — kit/Field (T7)
+        Kit.Field {
             width: parent.width - sortChip.width - parent.spacing
-            height: 34
-            // индикация фокуса — сменой фона (QTBUG-137166: border.width: 0)
-            color: filterInput.activeFocus ? Theme.raise2 : Theme.raise
-            border.width: 0
-
-            TextInput {
-                id: filterInput
-                anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.rightMargin: 10
-                verticalAlignment: TextInput.AlignVCenter
-                color: Theme.txt
-                selectionColor: Theme.raise2
-                selectedTextColor: Theme.txt
-                clip: true
-                font.family: Theme.font
-                font.pixelSize: 11
-                onTextChanged: ProcMon.filter = text
-
-                Text {
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: filterInput.text.length === 0
-                             && !filterInput.activeFocus
-                    text: "filter…"
-                    color: Theme.dim
-                    font.family: Theme.font
-                    font.pixelSize: 11
-                }
-
-                // каретка-подчёркивание (ANALYSIS: 8×2, blink + пауза)
-                cursorDelegate: Rectangle {
-                    width: 8
-                    height: 2
-                    color: Theme.txt
-                    SequentialAnimation on opacity {
-                        loops: Animation.Infinite
-                        running: filterInput.activeFocus
-                        NumberAnimation { duration: Motion.caretBlink / 2; to: 0 }
-                        NumberAnimation { duration: Motion.caretBlink / 2; to: 1 }
-                    }
-                }
-            }
+            placeholder: "filter…"
+            onTextEdited: (t) => ProcMon.filter = t
         }
 
         Kit.Chip {
