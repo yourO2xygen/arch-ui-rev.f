@@ -11,6 +11,7 @@
 // Подвал (head/foot в shell.qml): user · uptime.
 
 import QtQuick
+import Quickshell.Io
 import ".."
 import "../kit" as Kit
 

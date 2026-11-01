@@ -72,7 +72,7 @@ Rectangle {
         Text {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
-            visible: input.text.length === 0 && !input.activeFocus
+            visible: input.text.length === 0
             text: root.placeholder
             color: Theme.dim
             font.family: Theme.font
