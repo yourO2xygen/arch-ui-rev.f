@@ -92,6 +92,7 @@ ShellRoot {
                 // head по умолчанию (docker до задачи 6)
                 Text {
                     visible: colA.panelId !== "taskmgr"
+                             && colA.panelId !== "docker"
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -125,9 +126,33 @@ ShellRoot {
                         font.letterSpacing: 1
                     }
                 }
+
+                // docker (ANALYSIS 5.x): i-container + DOCKER
+                Row {
+                    visible: colA.panelId === "docker"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Kit.Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "container"
+                        size: 13
+                        color: Theme.txt2
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "DOCKER"
+                        color: Theme.txt2
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.letterSpacing: 1
+                    }
+                }
             }
         }
-        // taskmgr — реальная панель (задача 5); прочие panelId слота (docker) — заглушка
+        // docker — реальная панель (задача 6); taskmgr — реальная панель (задача 5)
         body: Component {
             Item {
                 id: bodyA
@@ -140,7 +165,12 @@ ShellRoot {
                 }
                 Loader {
                     anchors.fill: parent
-                    active: bodyA.panelId !== "taskmgr"
+                    active: bodyA.panelId === "docker"
+                    sourceComponent: Docker {}
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: bodyA.panelId !== "taskmgr" && bodyA.panelId !== "docker"
                     sourceComponent: Placeholder { panelId: bodyA.panelId }
                 }
             }
@@ -154,6 +184,13 @@ ShellRoot {
                     text: colA.panelId === "taskmgr"
                           ? ProcMon.view.length + " / " + ProcMon.procs.length
                             + " · sorted by " + ProcMon.sortBy
+                          : colA.panelId === "docker"
+                          ? (DockerMon.dockerPresent
+                             ? DockerMon.runningCount + " running · "
+                               + DockerMon.exitedCount + " exited · v"
+                               + DockerMon.version
+                             : "docker " + (DockerMon.ghostReason === "no permission"
+                                            ? "no permission" : "unavailable"))
                           : "archui"
                     color: Theme.dim
                     font.family: Theme.font
@@ -163,7 +200,8 @@ ShellRoot {
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: colA.panelId === "taskmgr" ? "del · term" : "slot a"
+                    text: colA.panelId === "taskmgr" ? "del · term"
+                        : colA.panelId === "docker" ? "logs · res · ports" : "slot a"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9

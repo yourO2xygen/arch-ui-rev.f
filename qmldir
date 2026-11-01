@@ -11,3 +11,5 @@ Toasts 1.0 components/Toasts.qml
 NotifCenter 1.0 components/NotifCenter.qml
 TaskMgr 1.0 components/TaskMgr.qml
 SysInfo 1.0 components/SysInfo.qml
+singleton DockerMon 1.0 services/DockerMon.qml
+Docker 1.0 components/Docker.qml
