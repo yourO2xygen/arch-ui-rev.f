@@ -215,6 +215,11 @@ ShellRoot {
         id: colB
         slot: "B"
         panels: ["launcher", "logout", "sysinfo"]
+        // Лаунчер (T7) — Exclusive на время открытия, при закрытии назад OnDemand (SPEC §2).
+        // Остальным панелям слота остаётся OnDemand из kit/Panel.qml.
+        WlrLayershell.keyboardFocus: LayoutState.slots.B === "launcher"
+                                     ? WlrKeyboardFocus.Exclusive
+                                     : WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "archui:col-b"
         anchors { left: true; top: true }
         margins.left: 548
@@ -224,9 +229,10 @@ ShellRoot {
 
         head: Component {
             Item {
-                // head по умолчанию (launcher/logout до задачи 7)
+                // head по умолчанию (logout; launcher — оверлей без head, задача 7)
                 Text {
                     visible: colB.panelId !== "sysinfo"
+                             && colB.panelId !== "launcher"
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -283,9 +289,24 @@ ShellRoot {
                 }
                 Loader {
                     anchors.fill: parent
+                    active: bodyB.panelId === "logout"
+                    sourceComponent: Logout {}
+                }
+                Loader {
+                    anchors.fill: parent
                     active: bodyB.panelId !== "sysinfo"
+                            && bodyB.panelId !== "logout"
+                            && bodyB.panelId !== "launcher"
                     sourceComponent: Placeholder { panelId: bodyB.panelId }
                 }
+            }
+        }
+        // launcher/logout (задача 7): launcher — оверлей на всё окно (dock у нижней
+        // кромки слота), logout — панель в body; подвал logout: user · uptime.
+        overlay: Component {
+            Loader {
+                active: colB.panelId === "launcher"
+                sourceComponent: Launcher {}
             }
         }
         foot: Component {
@@ -294,8 +315,13 @@ ShellRoot {
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
+                    visible: colB.panelId !== "launcher"
                     text: colB.panelId === "sysinfo"
-                          ? Quickshell.env("USER") + "@" + SysMon.hostName : "archui"
+                          ? Quickshell.env("USER") + "@" + SysMon.hostName
+                          : colB.panelId === "logout"
+                          ? Quickshell.env("USER") + " · up "
+                            + SysMon.fmtUptime(SysMon.uptimeSec)
+                          : "archui"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9
@@ -304,11 +330,25 @@ ShellRoot {
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
+                    visible: colB.panelId !== "launcher"
                     text: colB.panelId === "sysinfo" ? "kernel " + SysMon.kernel : "slot b"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9
                 }
+            }
+        }
+    }
+
+    // Клик мимо лаунчера закрывает его (SPEC §2). Активен только пока launcher
+    // открыт; cleared — слот B всё ещё launcher (не перехватывать чужие закрытия).
+    HyprlandFocusGrab {
+        active: LayoutState.slots.B === "launcher"
+        windows: [colB]
+        onCleared: {
+            if (LayoutState.slots.B === "launcher") {
+                console.info("[archui] launcher: focus grab cleared — closing")
+                LayoutState.closeSlot("B")
             }
         }
     }

@@ -13,3 +13,5 @@ TaskMgr 1.0 components/TaskMgr.qml
 SysInfo 1.0 components/SysInfo.qml
 singleton DockerMon 1.0 services/DockerMon.qml
 Docker 1.0 components/Docker.qml
+Launcher 1.0 components/Launcher.qml
+Logout 1.0 components/Logout.qml

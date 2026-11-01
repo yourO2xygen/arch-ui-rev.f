@@ -44,6 +44,9 @@ PanelWindow {
     property var panels: []           // panelId'ы слота (стек Loader'ов, порядок = z при равенстве)
     property Component head: null     // общий head-кит слота, 40px
     property Component body: null     // контент панели; инстанс на каждый panelId стека
+    property Component overlay: null  // контент на всё окно слота (без head/foot/pad/clip) —
+                                      // лаунчер T7: dock у нижней кромки слота, список 504×372
+                                      // растёт от неё; геометрия SPEC §4 в границах body не помещается
     property Component foot: null     // общий foot-кит слота, 30px
 
     readonly property string panelId: LayoutState.slots[panel.slot] ?? ""
@@ -185,6 +188,15 @@ PanelWindow {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 height: panel.footH
+            }
+
+            // Оверлей на всё окно (см. property overlay). Едет в общей волне слота —
+            // opacity контента (_contentStage) применяется к `content` целиком.
+            Loader {
+                active: panel.overlay !== null
+                sourceComponent: panel.overlay
+                anchors.fill: parent
+                z: 3
             }
         }
     }

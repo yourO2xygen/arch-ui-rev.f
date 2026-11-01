@@ -52,6 +52,7 @@ Singleton {
     readonly property int caretBlink: 1070
     readonly property int caretPause: 900
     readonly property int sparkIn: 200           // sysinfo: fade-in столбца спарклайна (ANALYSIS 5.3)
+    readonly property int haltFade: 1500         // logout: фейд «system halted» (DESIGN §4 — 1.5s сцена)
 
     // Бар/календарь (T3): полумиг табло часов (провал и возврат — по половине),
     // свёртывание окна календаря, фейд nav-строки и прочего скрываемого контента,
