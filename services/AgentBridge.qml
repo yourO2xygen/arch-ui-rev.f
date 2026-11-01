@@ -155,6 +155,8 @@ Singleton {
             // в свежий процесс после RESTART (рулинг ревью I1)
             root.question = null
             root._pending = {}          // ответы мёртвого процесса не приходят
+            root._pendingAt = {}        // иначе sweep после RESTART снимет протухший
+                                        // cb(null) → маркирует ЧУЖОЙ свежий пузырь
             // чужие записи мёртвого процесса не приедут в свежую сессию (M1)
             if (root._outQ.length > 0)
                 console.warn("[AgentBridge] stdin-очередь сброшена при выходе: " + root._outQ.length)
@@ -215,6 +217,8 @@ Singleton {
     function _onResponse(rec) {
         const cb = root._pending[rec.id]
         if (cb !== undefined) delete root._pending[rec.id]
+        // иначе sweep снимет протухший _pendingAt → ложный "pending timeout"
+        delete root._pendingAt[rec.id]
         if (rec.success && rec.data) {
             switch (rec.command) {
             case "get_state":
@@ -364,18 +368,20 @@ Singleton {
     function _sweepPending() {
         const now = Date.now()
         let dropped = 0
+        let ids = ""
         for (const id in root._pendingAt) {
             if (now - root._pendingAt[id] > root.pendingTimeoutMs) {
                 const cb = root._pending[id]
                 delete root._pending[id]
                 delete root._pendingAt[id]
                 dropped++
+                ids += " " + id
                 if (cb) cb(null)       // rec=null — таймаут
             }
         }
         if (dropped > 0) {
             console.warn("[AgentBridge] pending timeout: " + dropped
-                         + " запрос(ов) без ответа за " + root.pendingTimeoutMs + "ms")
+                         + " запрос(ов) без ответа за " + root.pendingTimeoutMs + "ms; ids=" + ids)
             if (root.statusText.indexOf("queued") === 0) root.statusText = ""
         }
     }
@@ -395,40 +401,35 @@ Singleton {
     }
 
     // недоставленное сообщение (response success=false / таймаут) — маркируем
-    // пузырь, НЕ удаляем (история важнее красоты; ревью M5)
-    function _markLastUserFailed() {
-        const f = root.feed
-        for (let i = f.length - 1; i >= 0; i--) {
-            if (f[i].kind === "user") {
-                f[i].failed = true
-                root._queueFlush()
-                return
-            }
-        }
+    // СВОЙ пузырь по ссылке из cb-замыкания, НЕ удаляем (история важнее
+    // красоты; ревью M5/раунд 2 — привязка к конкретному запросу)
+    function _markFailed(rec) {
+        rec.failed = true
+        root._queueFlush()
     }
 
     // ---------------------------------------------------------------- public
     function send(text) {
         const t = String(text).trim()
         if (t.length === 0 || root.dead || root.stopped) return
-        root._push("user", t)
+        const mine = root._push("user", t)
         if (root.generating) {
             // docs: prompt во время стрима без streamingBehavior — ошибка
             root._cmd({ type: "prompt", message: t, streamingBehavior: "steer" },
-                      (rec) => { if (rec === null || rec.success === false) root._markLastUserFailed() })
+                      (rec) => { if (rec === null || rec.success === false) root._markFailed(mine) })
             root.statusText = "queued (steer)"
         } else {
             root._cmd({ type: "prompt", message: t },
-                      (rec) => { if (rec === null || rec.success === false) root._markLastUserFailed() })
+                      (rec) => { if (rec === null || rec.success === false) root._markFailed(mine) })
         }
     }
 
     function steer(text) {
         const t = String(text).trim()
         if (t.length === 0 || !root.generating) return
-        root._push("user", t)
+        const mine = root._push("user", t)
         root._cmd({ type: "steer", message: t },
-                  (rec) => { if (rec === null || rec.success === false) root._markLastUserFailed() })
+                  (rec) => { if (rec === null || rec.success === false) root._markFailed(mine) })
     }
 
     function abort() {
@@ -477,8 +478,10 @@ Singleton {
 
     // ------------------------------------------------------------------ лента
     function _push(kind, text, streaming) {
-        root.feed.push({ kind: kind, text: text, streaming: !!streaming })
+        const rec = { kind: kind, text: text, streaming: !!streaming }
+        root.feed.push(rec)
         root._queueFlush()
+        return rec
     }
 
     // Батчинг (паттерн NotifStore): мутации in-place, вью — один slice() за кадр.
