@@ -3,8 +3,9 @@
 // подпись 9, сегментированная полоса; у cpu — спарклайн-гистограмма, fade-in столбца
 // 200ms) + секция HARDWARE 2×3 (строки h28, метка-колонка 84, иконка 12): battery /
 // network / vpn / bluetooth / usb + шестая строка по наличию железа (gpu °C, иначе
-// loadavg). Нет nvidia-smi → gpu/vram — ghost-строки («—», dim). Все данные —
-// биндинги на SysMon; панель сама ничего не читает (SPEC §8: чтения — в синглтоне).
+// loadavg). GPU по вендору: nvidia / amdgpu дают метрики; intel — name-only
+// (gpuName вместо ghost, % / vram — dim «iGPU», «shared»); headless — ghost.
+// Все данные — биндинги на SysMon; панель сама ничего не читает (SPEC §8: чтения — в синглтоне).
 // Head (i-gauge + SYSINFO + чип uptime) и foot (user@host · ядро) живут в shell.qml.
 
 import QtQuick
@@ -17,6 +18,7 @@ Item {
     property string panelId: ""
 
     readonly property bool gpuOk: SysMon.gpuPresent
+    readonly property bool nameOnly: SysMon.gpuInfo === "name-only"   // intel iGPU
     readonly property int sparkH: 14          // proto: спарклайн 14px (ANALYSIS 5.3)
 
     // ---------------------------------------------------------------- метрики
@@ -222,23 +224,28 @@ Item {
                 caption: SysMon.fmtKb(SysMon.memAvailKb) + " available · " + SysMon.fmtKb(SysMon.memTotalKb) + " total"
                 barValue: SysMon.mem
             }
+            // name-only (intel iGPU): вместо ghost-пустоты — символьные значения
             Metric {
                 label: "GPU"
-                value: root.gpuOk ? (SysMon.gpu * 100).toFixed(1) : "—"
-                unit: root.gpuOk ? "%" : ""
-                caption: root.gpuOk ? ("nvidia · " + SysMon.gpuTemp + "°") : "no gpu device"
+                value: !root.gpuOk ? "—" : root.nameOnly ? "iGPU" : (SysMon.gpu * 100).toFixed(1)
+                unit: root.gpuOk && !root.nameOnly ? "%" : ""
+                caption: root.gpuOk
+                        ? (SysMon.gpuName + (SysMon.gpuTemp > 0 ? " · " + SysMon.gpuTemp + "°" : ""))
+                        : "no gpu device"
                 barValue: SysMon.gpu
-                ghost: !root.gpuOk
+                ghost: !root.gpuOk || root.nameOnly
             }
             Metric {
                 label: "VRAM"
-                value: root.gpuOk ? (SysMon.vramUsedMb >= 1024
-                       ? (SysMon.vramUsedMb / 1024).toFixed(1) + " / " + (SysMon.vramTotalMb / 1024).toFixed(0)
-                       : SysMon.vramUsedMb + " / " + SysMon.vramTotalMb) : "—"
-                unit: root.gpuOk ? (SysMon.vramUsedMb >= 1024 ? "G" : "M") : ""
-                caption: root.gpuOk ? "gpu memory" : "no gpu device"
+                value: !root.gpuOk || root.nameOnly ? "—"
+                       : (SysMon.vramUsedMb >= 1024
+                          ? (SysMon.vramUsedMb / 1024).toFixed(1) + " / " + (SysMon.vramTotalMb / 1024).toFixed(0)
+                          : SysMon.vramUsedMb + " / " + SysMon.vramTotalMb)
+                unit: root.gpuOk && !root.nameOnly ? (SysMon.vramUsedMb >= 1024 ? "G" : "M") : ""
+                caption: !root.gpuOk ? "no gpu device"
+                        : root.nameOnly ? "shared system memory" : "gpu memory"
                 barValue: SysMon.vram
-                ghost: !root.gpuOk
+                ghost: !root.gpuOk || root.nameOnly
             }
         }
 
@@ -293,9 +300,9 @@ Item {
                 HwRow {
                     icon: root.gpuOk ? "gpu" : "activity"
                     label: root.gpuOk ? "gpu temp" : "load"
-                    value: root.gpuOk ? (SysMon.gpuTemp + "°")
+                    value: root.gpuOk ? (SysMon.gpuTemp > 0 ? SysMon.gpuTemp + "°" : "—")
                                       : (SysMon.loadavg.split(" ")[0] || "—")
-                    meta: root.gpuOk ? "nvidia" : "1 min"
+                    meta: root.gpuOk ? SysMon.gpuName : "1 min"
                     ghost: !root.gpuOk && SysMon.loadavg.length === 0
                 }
             }

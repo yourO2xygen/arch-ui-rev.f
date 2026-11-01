@@ -4,9 +4,12 @@ pragma Singleton
 // Живые значения системы для SysInfo (слот B):
 //   cpu     — дельта /proc/stat между тиками (Timer 2s, idle+iowait), 0..1
 //   mem     — /proc/meminfo MemTotal/MemAvailable, 0..1 (+ kB)
-//   gpu/vram— ОДИН долгоживущий /usr/bin/nvidia-smi --query-gpu=... -l 5
-//             (Process + SplitParser "\n"). Нет nvidia-smi → процесс не дёргается
-//             повторно (FailedToStart один раз), строки в UI — ghost.
+//   gpu/vram— ветки по вендору (одна на всю жизнь шелла):
+//             nvidia → долгоживущий /usr/bin/nvidia-smi -l 5 (Process+SplitParser);
+//             иначе скан /sys/class/drm/card[0-9]/device: vendor 0x1002 → amdgpu
+//             sysfs (FileView watchChanges, темпа может не быть → gpuTemp 0),
+//             vendor 0x8086 → intel name-only (у i915 метрик в sysfs нет);
+//             ничего найдено нет → строки в UI — ghost.
 //   battery — /sys/class/power_supply/BAT* (capacity/status, AC — ADP*/online)
 //   network — /sys/class/net состояния + ip: Process `ip -brief addr` раз в 30s
 //   uptime/loadavg — /proc/uptime, /proc/loadavg; host/kernel — /proc/sys/kernel/*
@@ -35,7 +38,7 @@ Singleton {
     readonly property real mem: root.memTotalKb > 0 ? root.memUsedKb / root.memTotalKb : 0
 
     // ------------------------------------------------------------------- gpu
-    // nvidia-smi dead → не пересоздаём процесс никогда (строки UI — ghost)
+    // Вендор-ветвление (Task 13): выбор один раз при старте, ветки взаимоисключающие
     property bool gpuPresent: false
     property real gpu: 0                       // 0..1
     property int vramUsedMb: 0
@@ -43,6 +46,16 @@ Singleton {
     readonly property real vram: root.vramTotalMb > 0 ? root.vramUsedMb / root.vramTotalMb : 0
     property int gpuTemp: 0
     property bool _gpuDead: false
+    property bool _nvidiaOk: false             // проба бинаря прошла
+    property string _intelDriver: ""          // uevent amdgpu-скана, напр. "i915"
+    readonly property string gpuName: root._amdCard.length > 0 ? "amdgpu"
+                                 : root._nvidiaOk ? "nvidia"
+                                 : root._intelDriver.length > 0 ? "intel igpu · " + root._intelDriver : ""
+    property string gpuInfo: ""                // "name-only" — intel: имя есть, метрик нет
+    property int _cardIdx: -1                  // скан /sys/class/drm/card[0-9] при старте
+    property int _intelIdx: -1                 // первая card с vendor 0x8086
+    property int _hwIdx: -1                    // скан hwmonX amdgpu (temp1_input опционален)
+    property string _amdCard: ""               // базовый sysfs-путь amdgpu-карты
 
     // --------------------------------------------------------------- battery
     property bool batPresent: false
@@ -269,9 +282,9 @@ Singleton {
     }
 
     // ------------------------------------------------------------------- gpu
-    // Один долгоживущий поток. Нет бинаря → FailedToStart, но QProcess при этом НЕ
-    // эмитит exited — потому бинаря проверяем заранее FileView-пробой: нет файла →
-    // _gpuDead навсегда (повторных попыток нет, строки UI — ghost).
+    // NVIDIA-ветка: один долгоживущий поток. Нет бинаря → FailedToStart, но QProcess
+    // при этом НЕ эмитит exited — потому бинаря проверяем заранее FileView-пробой:
+    // нет файла → _gpuDead навсегда и уходим в drm/sysfs-скан (amdgpu/intel ниже).
     property int _gpuLines: 0
 
     Process {
@@ -296,16 +309,119 @@ Singleton {
         Component.onDestruction: if (gpuProc.running) gpuProc.signal(15)
     }
 
-    // Пройба бинаря: нет → ghost и процесс вообще не запускаем
+    // Проба бинаря: есть → nvidia-ветка (процесс), нет → drm-скан ниже.
+    // FailedToStart у Process этого не покажет (см. комментарий у gpuProc).
     FileView {
         path: "/usr/bin/nvidia-smi"
         watchChanges: false
-        onLoaded: { root.gpuPresent = true; gpuProc.exec(gpuProc.command) }
+        onLoaded: { root._nvidiaOk = true; root.gpuPresent = true; gpuProc.exec(gpuProc.command) }
         onLoadFailed: {
             root._gpuDead = true
             root.gpuPresent = false
-            console.info("[SysMon] nvidia-smi не найден — gpu/vram ghost")
+            console.info("[SysMon] nvidia-smi не найден — сканируем drm/sysfs-карты")
+            root._cardIdx = 0
         }
+    }
+
+    // ------------------------------------------------- amdgpu / intel (sysfs)
+    // Скан /sys/class/drm/card[0-9]/device/vendor (карты могут нумероваться не с
+    // card0 — на i915-ноуте это card1): 0x1002 → amdgpu-карта (стоп), 0x8086 →
+    // запомнить первый для intel-fallback, дальше по списку. printErrors: false —
+    // отсутствующие cardN это норма скана, не шум в лог. Следующий шаг — через
+    // Qt.callLater: смена path из handler'а дропает in-flight операцию FileView.
+    FileView {
+        id: cardScan
+        printErrors: false
+        path: root._cardIdx >= 0 && root._cardIdx <= 7
+              ? "/sys/class/drm/card" + root._cardIdx + "/device/vendor" : ""
+        watchChanges: false
+        onLoaded: {
+            const v = text().trim()
+            if (v === "0x1002" && root._amdCard.length === 0) {
+                root._amdCard = "/sys/class/drm/card" + root._cardIdx + "/device"
+                root.gpuPresent = true
+                root._hwIdx = 0                     // temp-файл ищем (может не быть)
+                console.info("[SysMon] amdgpu card" + root._cardIdx + " — sysfs-метрики")
+            } else {
+                if (v === "0x8086" && root._intelIdx === -1) root._intelIdx = root._cardIdx
+                Qt.callLater(root._scanAdvance)
+            }
+        }
+        onLoadFailed: Qt.callLater(root._scanAdvance)
+    }
+
+    function _scanAdvance() {
+        root._cardIdx++
+        if (root._cardIdx > 7) root._scanDone()
+    }
+
+    function _intelActivate() {
+        // name-only: метрик у iGPU в sysfs нет (gpu/vram = 0), UI рисует имя
+        // вместо ghost; % / vram там — dim («iGPU», «shared»)
+        if (root.gpuInfo.length > 0) return
+        root.gpuPresent = true
+        root.gpuInfo = "name-only"
+        console.info("[SysMon] intel card" + root._intelIdx + " — name-only (метрик нет)")
+    }
+
+    function _scanDone() {
+        // Скан прошёл без amdgpu: intel → name-only (если драйвер уже дочитан —
+        // активируем, иначе это сделает uevent-FileView), ничего → ghost
+        if (root._amdCard.length > 0) return
+        if (root._intelIdx >= 0 && root._intelDriver.length > 0) root._intelActivate()
+        else if (root._intelIdx === -1)
+            console.info("[SysMon] gpu не найден — gpu/vram ghost")
+    }
+
+    // Драйвер intel-карты для gpuName (DRIVER=i915 в uevent)
+    FileView {
+        printErrors: false
+        path: root._intelIdx >= 0
+              ? "/sys/class/drm/card" + root._intelIdx + "/device/uevent" : ""
+        watchChanges: false
+        onLoaded: {
+            const m = text().match(/^DRIVER=(\S+)$/m)
+            if (m) root._intelDriver = m[1]
+            if (root._cardIdx > 7 && root._amdCard.length === 0) root._scanDone()
+        }
+        onLoadFailed: if (root._cardIdx > 7) root._scanDone()
+    }
+
+    // AMD-метрики: только FileView + watchChanges (как battery/network, тик не
+    // нужен). Путь появляется, когда скан нашёл карту; грузится он же — Process нет.
+    FileView {
+        printErrors: false
+        path: root._amdCard.length > 0 ? root._amdCard + "/gpu_busy_percent" : ""
+        watchChanges: root._amdCard.length > 0
+        onLoaded: root.gpu = Math.max(0, Math.min(1, (parseInt(text()) || 0) / 100))
+    }
+    FileView {
+        printErrors: false
+        path: root._amdCard.length > 0 ? root._amdCard + "/mem_info_vram_used" : ""
+        watchChanges: root._amdCard.length > 0
+        onLoaded: root.vramUsedMb = Math.round((parseInt(text()) || 0) / 1048576)   // байты → MiB
+    }
+    FileView {
+        printErrors: false
+        path: root._amdCard.length > 0 ? root._amdCard + "/mem_info_vram_total" : ""
+        watchChanges: root._amdCard.length > 0
+        onLoaded: root.vramTotalMb = Math.round((parseInt(text()) || 0) / 1048576)
+    }
+    // Температура amdgpu: hwmonX перебором (первый существующий), файл может
+    // отсутствовать вовсе → _hwIdx=-1, gpuTemp тихо 0. Шаг тоже через callLater.
+    FileView {
+        printErrors: false
+        path: root._amdCard.length > 0 && root._hwIdx >= 0 && root._hwIdx <= 3
+              ? root._amdCard + "/hwmon/hwmon" + root._hwIdx + "/temp1_input" : ""
+        watchChanges: root._hwIdx === -2            // нашли — остаёмся live
+        onLoaded: {
+            root.gpuTemp = Math.round((parseInt(text()) || 0) / 1000)   // милли°C → °C
+            root._hwIdx = -2
+        }
+        onLoadFailed: Qt.callLater(function advance() {
+            if (root._hwIdx >= 0 && root._hwIdx < 3) root._hwIdx++
+            else root._hwIdx = -1                   // temp нет — деградируем тихо
+        })
     }
 
     function _parseGpu(line) {

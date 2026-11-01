@@ -14,9 +14,16 @@
 Что читает: `/proc/stat` (cpu — дельта между тиками, Timer 2s),
 `/proc/meminfo`, `/proc/uptime`, `/proc/loadavg`, `/proc/sys/kernel/*`,
 `/sys/class/power_supply/BAT*`, `/sys/class/net` + `ip -brief addr` раз в 30s.
-GPU/VRAM — один долгоживущий `/usr/bin/nvidia-smi … -l 5` (Process +
-SplitParser). На этой машине nvidia-smi **нет**: процесс не дёргается повторно,
-в UI ghost-значения «—» и пустые полосы. Процессы SysMon гасятся в
+GPU/VRAM — ветка по вендору, выбор один раз при старте:
+nvidia → один долгоживущий `/usr/bin/nvidia-smi … -l 5` (Process + SplitParser);
+нет бинаря → скан `/sys/class/drm/card[0-9]/device/vendor` (карты могут нумероваться
+не с card0): `0x1002` → **amdgpu** sysfs (`gpu_busy_percent`,
+`mem_info_vram_used/total`, `hwmon/hwmonX/temp1_input` — FileView `watchChanges`,
+без Process; temp-файла может не быть → gpuTemp 0); `0x8086` → **intel**
+name-only (`gpuInfo "name-only"`: gpuName в caption вместо ghost, % / VRAM — dim,
+у i915 метрик в sysfs нет); ничего → ghost-значения «—» и пустые полосы, как
+раньше. На этой машине nvidia-smi **нет**, карта — intel i915 ⇒ name-only; probes
+скана молчат (`printErrors: false`). Процессы SysMon гасятся в
 `Component.onDestruction`, чтобы перезагрузка конфига не плодила nvidia-smi.
 
 ## ProcMon — только при видимости TaskMgr
