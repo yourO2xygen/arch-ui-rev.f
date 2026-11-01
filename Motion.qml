@@ -20,10 +20,13 @@ Singleton {
     readonly property int contentDelay: 430
     readonly property int contentFade: 220
 
-    // Ghost-эхо панели (SPEC §3): +40/+140, scale .99→.952, opacity .45→0;
-    // на replace отключено. ghostOpacityTo всегда 0 — отдельно не токенизируется.
+    // Ghost-эхо панели (SPEC §3): +40/+140, scale .99→.952, opacity .45→0, длительность 620
+    // (ANALYSIS §3.2: `animation: ghost .62s var(--apple)`; DESIGN-RESEARCH называет 380 —
+    // взят факт из CSS макета); на replace отключено. ghostOpacityTo всегда 0 — отдельно
+    // не токенизируется.
     readonly property int ghostDelay1: 40
     readonly property int ghostDelay2: 140
+    readonly property int ghostFade: 620
     readonly property real ghostScaleFrom: 0.99
     readonly property real ghostScaleTo: 0.952
     readonly property real ghostOpacityFrom: 0.45

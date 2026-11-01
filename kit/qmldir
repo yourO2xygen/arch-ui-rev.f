@@ -1,3 +1,4 @@
 singleton IconData 1.0 IconData.qml
 Icon 1.0 Icon.qml
 Section 1.0 Section.qml
+Panel 1.0 Panel.qml
