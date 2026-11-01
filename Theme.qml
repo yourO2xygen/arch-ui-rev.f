@@ -43,6 +43,33 @@ Singleton {
     readonly property int s13: 13
     readonly property int s18: 18
 
+    // --- Шрифты: pixelSize для font.* (1:1 из существующих литералов) ---
+    readonly property int fs8: 8
+    readonly property int fs9: 9
+    readonly property int fs10: 10
+    readonly property int fs11: 11
+    readonly property int fs12: 12
+    readonly property int fs13: 13
+    readonly property int fs15: 15
+    readonly property int fs18: 18
+
+    // --- Структурные высоты: head/foot панелей, ряды, чипы ---
+    readonly property int hHead: 40   // head-кит слота (kit/Panel)
+    readonly property int hFoot: 30   // foot-кит слота (kit/Panel)
+    readonly property int hRow: 30    // панельные ряды (TaskMgr/AgentMgr/AgentChat/Docker info)
+    readonly property int hRowL: 34   // крупные ряды (Launcher)
+    readonly property int hRowS: 28   // компактные ряды (kit/Row, строки SysInfo hw)
+    readonly property int hChip: 22   // чипы/мини-плитки
+
+    // --- Отступы (дополнение к 6/8/10…): паддинги панелей/чипов ---
+    readonly property int s16: 16
+
+    // --- Ключевые ширины ---
+    readonly property int wLabel: 84  // метка-колонка label caps (Docker/SysInfo)
+
+    // --- Радиусы ---
+    readonly property int r2: 2
+
     // --- Стекло (SPEC §9): false не создаёт текстуры стекла вообще ---
     readonly property bool glass: false
 

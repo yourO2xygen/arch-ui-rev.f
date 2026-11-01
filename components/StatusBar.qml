@@ -165,8 +165,8 @@ Item {
                     readonly property bool occupied: root.wsOccupied(wsCell.wsId)
                     readonly property bool hovered: wsMa.containsMouse
 
-                    width: 22
-                    height: 22
+                    width: Theme.hChip
+                    height: Theme.hChip
                     color: active ? Theme.invBg
                          : occupied || hovered ? Theme.raise : "transparent"
 
@@ -176,7 +176,7 @@ Item {
                         color: parent.active ? Theme.invFg
                              : parent.occupied || parent.hovered ? Theme.txt2 : Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs10
                         font.weight: parent.active ? Font.Bold : Font.DemiBold
                     }
 
@@ -200,7 +200,7 @@ Item {
             text: root.layout
             color: Theme.txt
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs11
             font.weight: Font.Medium
         }
 
@@ -209,7 +209,7 @@ Item {
         // часы + дата: baseline-выравнивание, gap 8 (#clock)
         Item {
             width: timeText.width + 8 + dateText.width
-            height: 22
+            height: Theme.hChip
 
             Text {
                 id: timeText
@@ -218,7 +218,7 @@ Item {
                 text: root.timeText
                 color: Theme.txt
                 font.family: Theme.fontDseg
-                font.pixelSize: 15
+                font.pixelSize: Theme.fs15
                 font.bold: true
                 font.letterSpacing: 0.3   // ls .02em от 15px
             }
@@ -231,7 +231,7 @@ Item {
                 text: root.dateText
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs10
                 font.weight: Font.Medium
                 font.letterSpacing: 0.63  // ls .06em от 10.5px
             }

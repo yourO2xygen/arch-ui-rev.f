@@ -24,7 +24,7 @@ Column {
         text: root.label.toUpperCase()
         color: Theme.dim
         font.family: Theme.font
-        font.pixelSize: 9
+        font.pixelSize: Theme.fs9
     }
 
     Column {

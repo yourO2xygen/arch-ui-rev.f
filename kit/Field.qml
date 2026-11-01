@@ -22,7 +22,7 @@ Rectangle {
     property string placeholder: ""
     property int caretW: 8
     property int caretH: 2
-    property real fontPx: 11
+    property real fontPx: Theme.fs11
     signal textEdited(string text)
     signal accepted()
     signal escPressed()

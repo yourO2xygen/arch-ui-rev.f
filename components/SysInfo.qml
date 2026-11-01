@@ -53,7 +53,7 @@ Item {
                     text: cell.label
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                     font.letterSpacing: 1
                 }
             }
@@ -69,7 +69,7 @@ Item {
                     text: cell.value
                     color: cell.ghost ? Theme.dim : Theme.txt
                     font.family: Theme.font
-                    font.pixelSize: 15
+                    font.pixelSize: Theme.fs15
                 }
                 Text {
                     anchors.left: valText.right
@@ -78,7 +78,7 @@ Item {
                     text: cell.unit
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                 }
             }
 
@@ -88,7 +88,7 @@ Item {
                 color: Theme.dim
                 elide: Text.ElideRight
                 font.family: Theme.font
-                font.pixelSize: 9
+                font.pixelSize: Theme.fs9
             }
 
             Kit.SegBar {
@@ -153,7 +153,7 @@ Item {
         property bool ghost: false            // нет железа/выключено — dim
 
         width: 228
-        height: 28
+        height: Theme.hRowS
 
         Kit.Icon {
             anchors.left: parent.left
@@ -170,20 +170,20 @@ Item {
             text: hw.label
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
             font.letterSpacing: 1
             elide: Text.ElideRight
         }
         Text {
             anchors.left: parent.left
-            anchors.leftMargin: 84
+            anchors.leftMargin: Theme.wLabel
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - 84 - hw.metaW - 4
+            width: parent.width - Theme.wLabel - hw.metaW - 4
             text: hw.value
             color: hw.ghost ? Theme.dim : Theme.txt
             elide: Text.ElideRight
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs11
         }
         Text {
             anchors.right: parent.right
@@ -194,7 +194,7 @@ Item {
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
         }
     }
 

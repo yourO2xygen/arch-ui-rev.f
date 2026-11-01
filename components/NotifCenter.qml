@@ -64,7 +64,7 @@ Item {
                     text: "EMPTY"
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                     font.letterSpacing: 1
                 }
 
@@ -86,7 +86,7 @@ Item {
                             text: parent.modelData.toUpperCase()
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 9
+                            font.pixelSize: Theme.fs9
                             font.letterSpacing: 1
                         }
 
@@ -181,7 +181,7 @@ Item {
                         text: visible ? row.rec.summary : ""
                         color: Theme.txt
                         font.family: Theme.font
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs10
                         font.weight: Font.Medium
                         elide: Text.ElideRight
                     }
@@ -192,7 +192,7 @@ Item {
                         textFormat: Text.PlainText
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 9
+                        font.pixelSize: Theme.fs9
                         elide: Text.ElideRight
                     }
                 }
@@ -205,7 +205,7 @@ Item {
                                   + (row.rec.dup > 1 ? " · ×" + row.rec.dup : "") : ""
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                 }
             }
 

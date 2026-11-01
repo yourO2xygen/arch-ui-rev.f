@@ -208,7 +208,7 @@ Item {
                         text: visible ? card.rec.summary : ""
                         color: Theme.txt
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
@@ -221,7 +221,7 @@ Item {
                         textFormat: Text.StyledText
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs10
                         lineHeight: 1.4
                         elide: Text.ElideRight
                         wrapMode: Text.Wrap
@@ -260,7 +260,7 @@ Item {
                           + (card.rec.dup > 1 ? " · ×" + card.rec.dup : "") : ""
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
         }
 
         // крестик 12×12 — виден всегда (ANALYSIS §5.11), hover подсвечивает
@@ -316,7 +316,7 @@ Item {
             text: fold.text
             color: Theme.txt2
             font.family: Theme.font
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs10
             font.letterSpacing: 1
         }
 

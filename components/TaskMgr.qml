@@ -17,7 +17,7 @@ Item {
 
     property string panelId: ""
 
-    readonly property int rowH: 30
+    readonly property int rowH: Theme.hRow
     readonly property int colPid: 44
     readonly property int colCpu: 56
     readonly property int colMem: 64
@@ -75,7 +75,7 @@ Item {
                 text: modelData.t.toUpperCase()
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 9
+                font.pixelSize: Theme.fs9
                 font.letterSpacing: 1
                 verticalAlignment: Text.AlignVCenter
                 horizontalAlignment: modelData.t === "cpu" || modelData.t === "mem"
@@ -140,7 +140,7 @@ Item {
                             text: row.rec.pid
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs10
                             verticalAlignment: Text.AlignVCenter
                         }
                         Text {
@@ -150,7 +150,7 @@ Item {
                             color: Theme.txt2
                             elide: Text.ElideRight
                             font.family: Theme.font
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs11
                             verticalAlignment: Text.AlignVCenter
                         }
                         Text {
@@ -159,7 +159,7 @@ Item {
                             text: row.rec.cpu.toFixed(1)
                             color: row.hot ? Theme.txt : Theme.txt2
                             font.family: Theme.font
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs11
                             font.weight: row.hot ? Font.Bold : Font.Normal
                             horizontalAlignment: Text.AlignRight
                             verticalAlignment: Text.AlignVCenter
@@ -170,7 +170,7 @@ Item {
                             text: SysMon.fmtKb(row.rec.rss)
                             color: Theme.txt2
                             font.family: Theme.font
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs11
                             horizontalAlignment: Text.AlignRight
                             verticalAlignment: Text.AlignVCenter
                             rightPadding: 8
@@ -183,7 +183,7 @@ Item {
                             leftPadding: 8
                             elide: Text.ElideRight
                             font.family: Theme.font
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs10
                             verticalAlignment: Text.AlignVCenter
                         }
                         Item {
@@ -204,7 +204,7 @@ Item {
                                     text: "kill"
                                     color: killMa.containsMouse ? Theme.invFg : Theme.txt2
                                     font.family: Theme.font
-                                    font.pixelSize: 9
+                                    font.pixelSize: Theme.fs9
                                 }
                                 MouseArea {
                                     id: killMa

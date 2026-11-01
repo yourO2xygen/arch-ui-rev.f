@@ -20,7 +20,7 @@ Item {
     property string panelId: ""
     property string tab: "active"       // "active" | "history"
 
-    readonly property int rowH: 30
+    readonly property int rowH: Theme.hRow
     readonly property real colRadio: 20
     readonly property real colTime: 72
     // Row spacing 10 × 2 зазора — иначе правая колонка уезжает за край
@@ -59,7 +59,7 @@ Item {
             text: "RUNNING"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
             font.letterSpacing: 1
         }
 
@@ -92,7 +92,7 @@ Item {
                     color: AgentBridge.connected ? Theme.txt : Theme.dim
                     elide: Text.ElideRight
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs11
                     verticalAlignment: Text.AlignVCenter
                 }
                 Text {
@@ -105,7 +105,7 @@ Item {
                         : "down"
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs10
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -132,7 +132,7 @@ Item {
             text: "MODELS"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
             font.letterSpacing: 1
         }
 
@@ -199,7 +199,7 @@ Item {
                                     color: mrow.sel ? Theme.txt : Theme.txt2
                                     elide: Text.ElideRight
                                     font.family: Theme.font
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs11
                                     font.weight: mrow.sel ? Font.Medium : Font.Normal
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -209,7 +209,7 @@ Item {
                                     text: (mrow.isDefault ? "default" : "local")
                                     color: mrow.isDefault ? Theme.txt : Theme.dim
                                     font.family: Theme.font
-                                    font.pixelSize: 9
+                                    font.pixelSize: Theme.fs9
                                     horizontalAlignment: Text.AlignRight
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -256,7 +256,7 @@ Item {
                  : ""
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
             width: parent.width
             wrapMode: Text.Wrap
         }
@@ -275,14 +275,14 @@ Item {
             text: "SESSIONS"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
             font.letterSpacing: 1
         }
         Text {
             text: "single session (in-memory)"
             color: Theme.txt2
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs11
         }
         Text {
             width: parent.width
@@ -291,7 +291,7 @@ Item {
                 + "panel until New. restart of the process starts an empty one."
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
         }
     }
 

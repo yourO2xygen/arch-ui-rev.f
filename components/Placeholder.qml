@@ -20,7 +20,7 @@ Item {
             text: root.panelId === "" ? "PANEL" : root.panelId.toUpperCase()
             color: Theme.txt
             font.family: Theme.font
-            font.pixelSize: 13
+            font.pixelSize: Theme.fs13
             font.letterSpacing: 2
         }
 
@@ -28,7 +28,7 @@ Item {
             text: "placeholder · реальный компонент — задача 3/4"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs9
         }
     }
 }

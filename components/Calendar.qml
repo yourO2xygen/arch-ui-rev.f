@@ -129,8 +129,8 @@ Item {
 
             Rectangle {
                 id: prevBtn
-                width: 22
-                height: 22
+                width: Theme.hChip
+                height: Theme.hChip
                 anchors.verticalCenter: parent.verticalCenter
                 color: prevMa.containsMouse || prevMa.pressed ? Theme.raise2 : Theme.raise
                 Kit.Icon { name: "chevron-left"; size: 13; color: Theme.txt2; anchors.centerIn: parent }
@@ -153,14 +153,14 @@ Item {
                 text: root.monthLabel
                 color: Theme.txt
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fs12
                 font.weight: Font.DemiBold
             }
 
             Rectangle {
                 id: nextBtn
-                width: 22
-                height: 22
+                width: Theme.hChip
+                height: Theme.hChip
                 anchors.left: monthText.right
                 anchors.leftMargin: 4
                 anchors.verticalCenter: parent.verticalCenter
@@ -199,7 +199,7 @@ Item {
                         text: parent.modelData
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 9
+                        font.pixelSize: Theme.fs9
                         font.weight: Font.Medium
                         font.letterSpacing: 0.85   // ls .1em от 8.5px
                     }
@@ -234,7 +234,7 @@ Item {
                         color: parent.isToday ? Theme.invFg
                              : parent.modelData.out ? Theme.ghost : Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.weight: parent.isToday ? Font.Bold : Font.Medium
                     }
 
@@ -255,7 +255,7 @@ Item {
             x: root.padH
             y: 258
             width: parent.width - root.padH * 2
-            height: 22
+            height: Theme.hChip
 
             Text {
                 anchors.left: parent.left
@@ -263,7 +263,7 @@ Item {
                 text: "week " + root.weekNo
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 9
+                font.pixelSize: Theme.fs9
             }
 
             Text {
@@ -272,7 +272,7 @@ Item {
                 text: DateFmt.monthYear(root.viewYear, root.viewMonth)
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 9
+                font.pixelSize: Theme.fs9
             }
         }
     }
@@ -286,7 +286,7 @@ Item {
         anchors.rightMargin: root.padH
         y: 14
         width: chipText.implicitWidth + 16   // .chip{padding:4px 8px} → 8 с боков
-        height: 22
+        height: Theme.hChip
         color: chipMa.containsMouse || chipMa.pressed ? Theme.raise2 : Theme.raise
 
         Text {
@@ -297,7 +297,7 @@ Item {
                   : DateFmt.dayMonth(root.todayM, root.todayD)
             color: Theme.txt2
             font.family: Theme.font
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs10
             font.weight: Font.Medium
         }
 

@@ -27,7 +27,7 @@ Rectangle {
 
     readonly property bool hovered: ma.containsMouse
 
-    height: 28
+    height: Theme.hRowS
     color: root.selected ? Theme.raise2 : root.hovered ? Theme.raise : "transparent"
 
     // selected inset: контур 1px на внутренних полях 2.5px (ANALYSIS .mrow)
@@ -58,7 +58,7 @@ Rectangle {
             text: root.label
             color: Theme.txt
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs11
             font.weight: Font.Medium
             elide: Text.ElideRight
             anchors.verticalCenter: parent.verticalCenter
@@ -69,7 +69,7 @@ Rectangle {
             text: root.value
             color: Theme.txt2
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs11
             elide: Text.ElideRight
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -84,7 +84,7 @@ Rectangle {
         text: root.meta
         color: Theme.dim
         font.family: Theme.font
-        font.pixelSize: 9
+        font.pixelSize: Theme.fs9
     }
 
     MouseArea {

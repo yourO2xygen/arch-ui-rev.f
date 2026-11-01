@@ -35,7 +35,7 @@ Rectangle {
              : root.primary ? Theme.invFg
              : Theme.txt2
         font.family: Theme.font
-        font.pixelSize: 10
+        font.pixelSize: Theme.fs10
         font.weight: Font.Medium
         font.letterSpacing: 1
     }

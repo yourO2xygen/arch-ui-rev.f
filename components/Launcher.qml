@@ -21,7 +21,7 @@ Item {
 
     readonly property int dockH: 48
     readonly property int listH: 372
-    readonly property int rowH: 34
+    readonly property int rowH: Theme.hRowL
     readonly property int tileS: 24
 
     // ------------------------------------------------------------- приложения
@@ -145,7 +145,7 @@ Item {
         height: root.dockH
         placeholder: "run…"
         caretW: 9
-        fontPx: 12
+        fontPx: Theme.fs12
 
         onTextEdited: (t) => root.query = t
         onEscPressed: root._close()
@@ -207,7 +207,7 @@ Item {
                         text: (row.modelData.name ? row.modelData.name : row.modelData.id).charAt(0).toUpperCase()
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.weight: Font.Medium
                     }
                 }
@@ -221,7 +221,7 @@ Item {
                     text: row.modelData.name ? row.modelData.name : row.modelData.id
                     color: Theme.txt
                     font.family: Theme.font
-                    font.pixelSize: 11   // DESIGN «11.5» — pixelSize int в Qt; округлено вниз
+                    font.pixelSize: Theme.fs11   // DESIGN «11.5» — pixelSize int в Qt; округлено вниз
                     elide: Text.ElideRight
                 }
 
@@ -237,7 +237,7 @@ Item {
                              ? row.modelData.categories[0] : "")
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                     elide: Text.ElideRight
                 }
 
@@ -287,7 +287,7 @@ Item {
                 text: "no matches"
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fs11
             }
         }
     }

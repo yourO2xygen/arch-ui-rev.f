@@ -118,7 +118,7 @@ Item {
                         text: tile.modelData.label
                         color: tile.inverted ? Theme.invFg : Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 9
+                        font.pixelSize: Theme.fs9
                         font.weight: Font.Medium
                         font.letterSpacing: 1
                     }
@@ -170,7 +170,7 @@ Item {
             text: "system halted"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs11
             font.letterSpacing: 1
         }
     }

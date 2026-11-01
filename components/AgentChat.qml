@@ -20,7 +20,7 @@ Item {
 
     property string panelId: ""
 
-    readonly property int rowH: 30
+    readonly property int rowH: Theme.hRow
     readonly property int fieldH: 40
     // максимальная ширина пузыря — ~78% ленты (pad панели уже срезан Panel.qml)
     readonly property real bubbleMaxW: width * 0.78
@@ -64,7 +64,7 @@ Item {
                 text: "no conversation — say something"
                 color: Theme.ghost
                 font.family: Theme.font
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs10
             }
 
             Repeater {
@@ -100,7 +100,7 @@ Item {
                             color: failed ? Theme.raise2 : Theme.invBg
                             opacity: failed ? 0.55 : 1
                             border.width: 0
-                            radius: 2
+                            radius: Theme.r2
                             Text {
                                 id: contentText
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -111,7 +111,7 @@ Item {
                                 text: rec.text
                                 color: failed ? Theme.txt2 : Theme.invFg
                                 font.family: Theme.font
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs11
                             }
                             Text {
                                 id: failMark
@@ -122,7 +122,7 @@ Item {
                                 text: "✕ undelivered"
                                 color: Theme.dim
                                 font.family: Theme.font
-                                font.pixelSize: 8
+                                font.pixelSize: Theme.fs8
                             }
                         }
                     }
@@ -142,7 +142,7 @@ Item {
                             visible: !emptyDone
                             color: Theme.raise2
                             border.width: 0
-                            radius: 2
+                            radius: Theme.r2
 
                             Text {
                                 id: contentText
@@ -156,7 +156,7 @@ Item {
                                 text: rec.text + (rec.streaming ? "▌" : "")
                                 color: Theme.txt
                                 font.family: Theme.font
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs11
                             }
 
                             // typing-индикатор: 3 пульсирующие точки (Motion.dotPulse),
@@ -207,7 +207,7 @@ Item {
                                 text: rec.text
                                 color: Theme.txt2
                                 font.family: Theme.font
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs10
                             }
                         }
                     }
@@ -230,7 +230,7 @@ Item {
                                 text: rec.text
                                 color: Theme.invFg
                                 font.family: Theme.font
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs10
                             }
                         }
                     }
@@ -251,7 +251,7 @@ Item {
                         : ""
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs10
                 }
                 Kit.Btn {
                     anchors.verticalCenter: parent.verticalCenter
@@ -288,7 +288,7 @@ Item {
                 text: AgentBridge.question ? AgentBridge.question.title : ""
                 color: Theme.txt
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fs11
                 font.weight: Font.Medium
                 width: parent.width
                 elide: Text.ElideRight
@@ -298,7 +298,7 @@ Item {
                 text: AgentBridge.question ? AgentBridge.question.message : ""
                 color: Theme.txt2
                 font.family: Theme.font
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs10
                 wrapMode: Text.Wrap
                 width: parent.width
             }

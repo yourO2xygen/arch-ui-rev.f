@@ -17,7 +17,7 @@ Item {
     property string panelId: ""
 
     readonly property int listW: 184
-    readonly property int rowH: 28
+    readonly property int rowH: Theme.hRowS
     readonly property int toolH: 26
     // иконочка тулбара 22×22 (пока одно использование — инлайн, в kit не выносим)
     component IconBtn: Rectangle {
@@ -27,8 +27,8 @@ Item {
         property bool selected: false
         signal clicked()
         readonly property bool hovered: ibMa.containsMouse && enabled
-        width: 22
-        height: 22
+        width: Theme.hChip
+        height: Theme.hChip
         enabled: true
         color: !enabled ? "transparent"
              : selected ? Theme.invBg
@@ -88,7 +88,7 @@ Item {
             text: "—  —  —"
             color: Theme.ghost
             font.family: Theme.font
-            font.pixelSize: 18
+            font.pixelSize: Theme.fs18
             font.letterSpacing: 2
         }
         Text {
@@ -98,7 +98,7 @@ Item {
                 : "docker unavailable"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs10
             font.letterSpacing: 1
         }
     }
@@ -121,7 +121,7 @@ Item {
                 text: "no containers"
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs10
             }
 
             Flickable {
@@ -189,7 +189,7 @@ Item {
                                     color: cRow.isSel ? Theme.txt : Theme.txt2
                                     elide: Text.ElideRight
                                     font.family: Theme.font
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs11
                                 }
                                 Text {
                                     width: parent.width
@@ -197,7 +197,7 @@ Item {
                                     color: Theme.dim
                                     elide: Text.ElideMiddle
                                     font.family: Theme.font
-                                    font.pixelSize: 8
+                                    font.pixelSize: Theme.fs8
                                 }
                             }
                             Text {
@@ -210,7 +210,7 @@ Item {
                                 elide: Text.ElideRight
                                 horizontalAlignment: Text.AlignRight
                                 font.family: Theme.font
-                                font.pixelSize: 9
+                                font.pixelSize: Theme.fs9
                             }
                             // разделитель 1px (ANALYSIS: список с разделителями)
                             Rectangle {
@@ -262,7 +262,7 @@ Item {
                         color: Theme.txt
                         elide: Text.ElideRight
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fs12
                         font.weight: Font.DemiBold
                     }
                     Kit.Chip {
@@ -361,7 +361,7 @@ Item {
                                   ? "no logs (container not running)" : "no logs"
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs10
                         }
 
                         Column {
@@ -398,7 +398,7 @@ Item {
                                             color: ln.level === "error"
                                                    ? Theme.invFg : Theme.dim
                                             font.family: Theme.font
-                                            font.pixelSize: 10
+                                            font.pixelSize: Theme.fs10
                                             verticalAlignment: Text.AlignVCenter
                                         }
                                         // источник (DESIGN §4: время dim, источник txt2)
@@ -410,7 +410,7 @@ Item {
                                                    ? Theme.invFg : Theme.txt2
                                             elide: Text.ElideRight
                                             font.family: Theme.font
-                                            font.pixelSize: 8
+                                            font.pixelSize: Theme.fs8
                                             verticalAlignment: Text.AlignVCenter
                                         }
                                         Text {
@@ -421,7 +421,7 @@ Item {
                                                  : ln.level === "warn" ? Theme.txt2
                                                  : Theme.txt2
                                             font.family: Theme.font
-                                            font.pixelSize: 10
+                                            font.pixelSize: Theme.fs10
                                             font.weight: ln.level === "warn" ? Font.Bold
                                                          : Font.Normal
                                             elide: Text.ElideRight
@@ -447,7 +447,7 @@ Item {
                             text: "no stats"
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs10
                         }
 
                         Repeater {
@@ -456,16 +456,16 @@ Item {
                             delegate: Item {
                                 required property var modelData
                                 width: parent.width
-                                height: 30
+                                height: Theme.hRow
 
                                 Text {
                                     anchors.left: parent.left
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: 84
+                                    width: Theme.wLabel
                                     text: modelData.label
                                     color: Theme.dim
                                     font.family: Theme.font
-                                    font.pixelSize: 9
+                                    font.pixelSize: Theme.fs9
                                     font.letterSpacing: 1
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -482,7 +482,7 @@ Item {
                                     text: modelData.value
                                     color: Theme.txt2
                                     font.family: Theme.font
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs11
                                     horizontalAlignment: Text.AlignRight
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -492,17 +492,17 @@ Item {
                         // health — строка после 4 метрик
                         Item {
                             width: parent.width
-                            height: 30
+                            height: Theme.hRow
                             visible: DockerMon.statsData !== null
 
                             Text {
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 84
+                                width: Theme.wLabel
                                 text: "HEALTH"
                                 color: Theme.dim
                                 font.family: Theme.font
-                                font.pixelSize: 9
+                                font.pixelSize: Theme.fs9
                                 font.letterSpacing: 1
                                 verticalAlignment: Text.AlignVCenter
                             }
@@ -515,7 +515,7 @@ Item {
                                 color: root.sel && root.sel.health === "healthy"
                                        ? Theme.txt : Theme.txt2
                                 font.family: Theme.font
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs11
                                 verticalAlignment: Text.AlignVCenter
                             }
                         }
@@ -534,7 +534,7 @@ Item {
                                   ? "no published ports" : "no container"
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs10
                         }
 
                         Repeater {
@@ -553,7 +553,7 @@ Item {
                                     color: Theme.txt2
                                     elide: Text.ElideMiddle
                                     font.family: Theme.font
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs11
                                     verticalAlignment: Text.AlignVCenter
                                 }
                                 Text {
@@ -563,7 +563,7 @@ Item {
                                     text: "→"
                                     color: Theme.dim
                                     font.family: Theme.font
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs11
                                     verticalAlignment: Text.AlignVCenter
                                 }
                                 Text {
@@ -575,7 +575,7 @@ Item {
                                     color: Theme.txt2
                                     elide: Text.ElideRight
                                     font.family: Theme.font
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs11
                                     verticalAlignment: Text.AlignVCenter
                                 }
                             }

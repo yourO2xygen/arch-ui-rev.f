@@ -16,6 +16,13 @@
 | `ghostLine` | white 50% | контуры ghost-анимаций |
 | `strokeE` | 1.5 | effective stroke иконок: `stroke_vb = strokeE·24/size`, пол 1.25 |
 | отступы | s6…s18 | 6/8/10/11/12/13/18 — фактические значения макета (шкала «кратно 4» не соблюдалась — переносили факт) |
+| отступы (паддинги) | `s16` | 16 — паддинг панелей (kit/Panel `padLeft`) |
+| шрифты (pixelSize) | `fs8`…`fs18` | 8/9/10/11/12/13/15/18 — все `font.pixelSize` в компонентах ссылаются только сюда |
+| высоты структур | `hHead` 40, `hFoot` 30 | head/foot-кит слота (kit/Panel) |
+| высоты рядов | `hRow` 30, `hRowL` 34, `hRowS` 28 | панельные ряды (TaskMgr/AgentMgr/AgentChat/Docker) / крупные (Launcher) / компактные (kit/Row, hw-строки SysInfo) |
+| высота чипов/плиток | `hChip` | 22 — чипы, мини-плитки, кнопки |
+| ширина метки | `wLabel` | 84 — метка-колонка label caps (Docker info, SysInfo hw) |
+| радиус | `r2` | 2 — скругление чипов/баблов |
 | `font` | "JetBrainsMono NFM" | системный 400–700, FontLoader не нужен |
 | `fontDseg` | DSEG7Classic-Bold | FontLoader из assets/fonts |
 | `glass` | false | false **не создаёт** текстуры стекла вообще (не просто прячет) |

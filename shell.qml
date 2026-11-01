@@ -58,7 +58,7 @@ ShellRoot {
             text: "CLEAR"
             color: Theme.txt2
             font.family: Theme.font
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs10
             font.weight: Font.Medium
         }
         MouseArea {
@@ -105,7 +105,7 @@ ShellRoot {
                     text: colA.panelId === "" ? "SLOT A" : colA.panelId.toUpperCase()
                     color: Theme.txt2
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs11
                     font.letterSpacing: 1
                 }
 
@@ -128,7 +128,7 @@ ShellRoot {
                         text: "TASKMGR"
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.letterSpacing: 1
                     }
                 }
@@ -152,7 +152,7 @@ ShellRoot {
                         text: "DOCKER"
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.letterSpacing: 1
                     }
                 }
@@ -176,7 +176,7 @@ ShellRoot {
                         text: "SYSINFO"
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.letterSpacing: 1
                     }
                 }
@@ -245,7 +245,7 @@ ShellRoot {
                           : "archui"
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                 }
                 Text {
                     visible: colA.panelId !== ""
@@ -257,7 +257,7 @@ ShellRoot {
                         : colA.panelId === "sysinfo" ? "kernel " + SysMon.kernel : "slot a"
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                 }
             }
         }
@@ -293,7 +293,7 @@ ShellRoot {
                     text: colB.panelId === "" ? "SLOT B" : colB.panelId.toUpperCase()
                     color: Theme.txt2
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs11
                     font.letterSpacing: 1
                 }
             }
@@ -365,7 +365,7 @@ ShellRoot {
                           : "archui"
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                 }
                 Text {
                     anchors.right: parent.right
@@ -376,7 +376,7 @@ ShellRoot {
                     text: "slot b"
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                 }
             }
         }
@@ -462,7 +462,7 @@ ShellRoot {
                         text: "CHAT"
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.letterSpacing: 1
                     }
                 }
@@ -478,8 +478,8 @@ ShellRoot {
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: cModelText.width + 16
-                        height: 22
-                        radius: 2
+                        height: Theme.hChip
+                        radius: Theme.r2
                         color: Theme.invBg
                         border.width: 0
                         Text {
@@ -488,7 +488,7 @@ ShellRoot {
                             text: AgentBridge.currentModel ? AgentBridge.currentModel.name : "—"
                             color: Theme.invFg
                             font.family: Theme.font
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs10
                             font.weight: Font.Medium
                         }
                         MouseArea {
@@ -509,8 +509,8 @@ ShellRoot {
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 22
-                        height: 22
-                        radius: 2
+                        height: Theme.hChip
+                        radius: Theme.r2
                         color: cPlusMa.containsMouse ? Theme.raise2 : Theme.raise
                         border.width: 0
                         Kit.Icon {
@@ -548,7 +548,7 @@ ShellRoot {
                         text: "AGENT MGR"
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.letterSpacing: 1
                     }
                 }
@@ -563,7 +563,7 @@ ShellRoot {
                           : "context —"
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                 }
 
                 // notifcenter (ANALYSIS §5.5): i-bell + NOTIFICATIONS · dnd · Clear
@@ -585,7 +585,7 @@ ShellRoot {
                         text: "NOTIFICATIONS"
                         color: Theme.txt2
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs11
                         font.letterSpacing: 1
                     }
                 }
@@ -602,7 +602,7 @@ ShellRoot {
                         text: "dnd"
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 8
+                        font.pixelSize: Theme.fs8
                     }
                     DndToggle {
                         anchors.verticalCenter: parent.verticalCenter
@@ -656,7 +656,7 @@ ShellRoot {
                           : "slot c"
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs9
                 }
             }
         }
