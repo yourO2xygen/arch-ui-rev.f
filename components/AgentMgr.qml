@@ -120,7 +120,7 @@ Item {
         // died: перезапуск прямо из RUNNING (дубль кнопки AgentChat — осознанно:
         // mgr смотрят не открывая чат)
         Kit.Btn {
-            visible: AgentBridge.dead
+            visible: AgentBridge.dead || AgentBridge.stopped
             text: "RESTART"
             onClicked: AgentBridge.restart()
         }
@@ -252,7 +252,7 @@ Item {
         Text {
             visible: AgentBridge.dead || AgentBridge.stopped
             text: AgentBridge.dead ? "process " + AgentBridge.statusText + " — RESTART to bring back"
-                 : AgentBridge.stopped ? "process stopped by user — RESTART in chat or start a new one"
+                 : AgentBridge.stopped ? "process stopped by user — RESTART to bring it back"
                  : ""
             color: Theme.dim
             font.family: Theme.font

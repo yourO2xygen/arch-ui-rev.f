@@ -15,7 +15,9 @@ pragma Singleton
 //     input|editor",...} → отвечаем {"type":"extension_ui_response","id",...}
 //
 // Жизненный цикл (рулинг T4/Important-3 — слот C может быть ЗАМЕНЁН):
-//   · ленивый старт при первом openIn(C, "chat"|"aimgr") (следим за LayoutState.slots.C);
+//   ленив ТОЛЬКО процесс: объект-синглтон инстанцируется биндингами head/foot
+//   слота C сразу при загрузке шелла; Process же стартует при первом
+//   openIn(C, "chat"|"aimgr") (следим за LayoutState.slots.C);
 //   · уход с обеих панелей процесс НЕ убивает — контекст разговора дороже
 //     150–300MB резидентного Node (suspend у rpc-протокола нет — задокументировано);
 //   · непредвиденная смерть (crash/kill снаружи) → died → статус в UI + restart();
@@ -147,7 +149,16 @@ Singleton {
             console.warn("[AgentBridge] pi exited rc=" + code)
             root.connected = false
             root.generating = false
-            root._pending = {}
+            // каретка/typing не должны мигать вечно в недобитом пузыре
+            root._finishStreamingBubble()
+            // открытая карточка question снимается: extension_ui_response не уедет
+            // в свежий процесс после RESTART (рулинг ревью I1)
+            root.question = null
+            root._pending = {}          // ответы мёртвого процесса не приходят
+            // чужие записи мёртвого процесса не приедут в свежую сессию (M1)
+            if (root._outQ.length > 0)
+                console.warn("[AgentBridge] stdin-очередь сброшена при выходе: " + root._outQ.length)
+            root._outQ = []
             if (root.stopped) {
                 root.statusText = "stopped"
             } else {
@@ -324,6 +335,9 @@ Singleton {
     // ------------------------------------------------------------------ stdin
     property var _outQ: []                // очередь записей (closed/старт)
     property var _pending: ({})           // id → callback(rec)
+    property var _pendingAt: ({})         // id → Date.now() (sweep таймаута)
+    // зависший (но живой) pi не должен вечно держать pending/статус (ревью M2)
+    readonly property int pendingTimeoutMs: 30000
     property int _reqN: 0
     property bool _starting: false
     property bool _botOpen: false
@@ -331,8 +345,39 @@ Singleton {
     function _cmd(obj, cb) {
         const id = "req-" + (++root._reqN)
         obj.id = id
-        if (cb) root._pending[id] = cb
+        if (cb) {
+            root._pending[id] = cb
+            root._pendingAt[id] = Date.now()
+        }
         root._writeObj(obj)
+    }
+
+    // sweep: записи без ответа дольше pendingTimeoutMs — снимаем с warn
+    Timer {
+        interval: 5000
+        running: root.connected
+        repeat: true
+        triggeredOnStart: false
+        onTriggered: root._sweepPending()
+    }
+
+    function _sweepPending() {
+        const now = Date.now()
+        let dropped = 0
+        for (const id in root._pendingAt) {
+            if (now - root._pendingAt[id] > root.pendingTimeoutMs) {
+                const cb = root._pending[id]
+                delete root._pending[id]
+                delete root._pendingAt[id]
+                dropped++
+                if (cb) cb(null)       // rec=null — таймаут
+            }
+        }
+        if (dropped > 0) {
+            console.warn("[AgentBridge] pending timeout: " + dropped
+                         + " запрос(ов) без ответа за " + root.pendingTimeoutMs + "ms")
+            if (root.statusText.indexOf("queued") === 0) root.statusText = ""
+        }
     }
 
     function _writeObj(obj) {
@@ -349,6 +394,19 @@ Singleton {
             piProc.write(root._outQ.shift())
     }
 
+    // недоставленное сообщение (response success=false / таймаут) — маркируем
+    // пузырь, НЕ удаляем (история важнее красоты; ревью M5)
+    function _markLastUserFailed() {
+        const f = root.feed
+        for (let i = f.length - 1; i >= 0; i--) {
+            if (f[i].kind === "user") {
+                f[i].failed = true
+                root._queueFlush()
+                return
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- public
     function send(text) {
         const t = String(text).trim()
@@ -356,10 +414,12 @@ Singleton {
         root._push("user", t)
         if (root.generating) {
             // docs: prompt во время стрима без streamingBehavior — ошибка
-            root._cmd({ type: "prompt", message: t, streamingBehavior: "steer" })
+            root._cmd({ type: "prompt", message: t, streamingBehavior: "steer" },
+                      (rec) => { if (rec === null || rec.success === false) root._markLastUserFailed() })
             root.statusText = "queued (steer)"
         } else {
-            root._cmd({ type: "prompt", message: t })
+            root._cmd({ type: "prompt", message: t },
+                      (rec) => { if (rec === null || rec.success === false) root._markLastUserFailed() })
         }
     }
 
@@ -367,7 +427,8 @@ Singleton {
         const t = String(text).trim()
         if (t.length === 0 || !root.generating) return
         root._push("user", t)
-        root._cmd({ type: "steer", message: t })
+        root._cmd({ type: "steer", message: t },
+                  (rec) => { if (rec === null || rec.success === false) root._markLastUserFailed() })
     }
 
     function abort() {
@@ -377,13 +438,13 @@ Singleton {
 
     function setModel(provider, modelId) {
         root._cmd({ type: "set_model", provider: provider, modelId: modelId },
-                  (rec) => { if (rec.success) root._applyState() })
+                  (rec) => { if (rec && rec.success) root._applyState() })
     }
 
     function newThread() {
         // in-memory сессия (SPEC Q3) — новая сессия тем же процессом + чистая лента
         root._cmd({ type: "new_session" }, (rec) => {
-            if (!rec.success) return
+            if (!rec || !rec.success) return
             root.feed = []
             root.question = null
             root._cmd({ type: "get_state" })
@@ -394,7 +455,7 @@ Singleton {
 
     function stats() {
         root._cmd({ type: "get_session_stats" }, (rec) => {
-            if (rec.success && rec.data) root.contextUsage = rec.data.contextUsage || null
+            if (rec && rec.success && rec.data) root.contextUsage = rec.data.contextUsage || null
         })
     }
 

@@ -81,22 +81,41 @@ Item {
                     Component {
                         id: userBubble
                         Rectangle {
+                            id: userBubbleRect
                             readonly property var rec: bubbleLoader.rec
-                            width: Math.min(bubbleMaxW, contentText.implicitWidth + 20)
-                            height: contentText.implicitHeight + 16
+                            // недоставленное (rpc success=false / таймаут) — dim + маркер,
+                            // НЕ удаляем (история важнее красоты; ревью M5)
+                            readonly property bool failed: rec.failed === true
+                            width: Math.min(bubbleMaxW,
+                                            Math.max(contentText.implicitWidth, failMark.visible ? failMark.implicitWidth : 0) + 20)
+                            height: contentText.implicitHeight + (failed ? 26 : 16)
                             anchors.right: parent.right
-                            color: Theme.invBg
+                            color: failed ? Theme.raise2 : Theme.invBg
+                            opacity: failed ? 0.55 : 1
                             border.width: 0
                             radius: 2
                             Text {
                                 id: contentText
-                                anchors.centerIn: parent
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.verticalCenterOffset: failed ? 8 : 0
                                 width: Math.min(bubbleMaxW - 20, implicitWidth)
                                 wrapMode: Text.Wrap
                                 text: rec.text
-                                color: Theme.invFg
+                                color: failed ? Theme.txt2 : Theme.invFg
                                 font.family: Theme.font
                                 font.pixelSize: 11
+                            }
+                            Text {
+                                id: failMark
+                                visible: userBubbleRect.failed
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.top: parent.top
+                                anchors.topMargin: 4
+                                text: "✕ undelivered"
+                                color: Theme.dim
+                                font.family: Theme.font
+                                font.pixelSize: 8
                             }
                         }
                     }
@@ -239,7 +258,6 @@ Item {
 
     // ручной скролл вверх отключает автоскролл до возврата в хвост
     property bool _userScrolled: false
-    function _dotPhase(i) { return i * 120 }
 
     // ------------------------------------------------- карточка agent question
     Rectangle {
