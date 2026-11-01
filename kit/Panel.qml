@@ -56,8 +56,7 @@ PanelWindow {
     readonly property int padRight: 16
     readonly property int padBottom: 16
 
-    // Стаггер замены (SPEC §2: новая стартует на +120ms выше по z)
-    readonly property int replaceStagger: 120
+    // Стаггер замены (SPEC §2: новая стартует на +120ms выше по z) — Motion.replaceStagger
 
     // -------------------------------------------------------------- состояние
     property string _current: ""      // panelId, показанный сейчас ("" — слот закрыт)
@@ -263,7 +262,7 @@ PanelWindow {
 
     Timer {
         id: replaceTimer
-        interval: panel.replaceStagger
+        interval: Motion.replaceStagger
         onTriggered: panel._replaceEnter()
     }
 
@@ -286,6 +285,18 @@ PanelWindow {
         if (cur === panel._current) return
         const prev = panel._current
         panel._current = cur
+
+        // Чужой/неизвестный panelId в персисте: ячейки нет — не «заклиниваем» слот,
+        // а честно закрываем его (LayoutState тоже сбрасывает состояние).
+        // closeSlot пишёт в persist — зовём отложенно: синхронный write в notify-цепочке
+        // биндинга slots даёт binding loop.
+        if (cur !== "" && _cellFor(cur) === null) {
+            console.warn(`[Panel ${panel.slot}] unknown panelId "${cur}" — closing slot`)
+            panel._current = ""
+            Qt.callLater(LayoutState.closeSlot, panel.slot)
+            return
+        }
+
         if (prev === "" && cur !== "") playOpen(cur, true)
         else if (prev !== "" && cur === "") playClose()
         else playReplace(prev, cur)
@@ -337,7 +348,9 @@ PanelWindow {
         const oc = _cellFor(oldPid)
         const nc = _cellFor(newPid)
         if (!oc || !nc) {
-            console.warn(`[Panel ${panel.slot}] replace: missing cell ("${oldPid}" → "${newPid}")`)
+            console.warn(`[Panel ${panel.slot}] replace: missing cell ("${oldPid}" → "${newPid}") — closing slot`)
+            panel._current = ""
+            Qt.callLater(LayoutState.closeSlot, panel.slot)
             return
         }
         panel._maskActive = true
@@ -348,6 +361,12 @@ PanelWindow {
         cellOut.stop()
         cellIn.stop()
         replaceInner.stop()
+        // SPEC §2: на replace ghost-эха нет — не доигрывать волну открытия
+        ghostRun.stop()
+        ghostA.opacity = 0
+        ghostB.opacity = 0
+
+        oc.z = 2                  // исходящая — НИЖЕ входящей (ревью: z-конфликт a→b→a)
 
         cellOutOpacity.target = oc
         cellOutScale.target = oc

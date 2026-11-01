@@ -34,8 +34,10 @@ Singleton {
     // Пульс точки статуса: 2s InOutSine, только у filled-варианта
     readonly property int dotPulse: 2000
 
-    // Замена панели: старая уходит 180 (fade + scale .97, без ghost-эхо)
+    // Замена панели: старая уходит 180 (fade + scale .97, без ghost-эхо);
+    // новая стартует на +120 (SPEC §2)
     readonly property int replaceExit: 180
+    readonly property int replaceStagger: 120
 
     // Глич: 350 (панели) / 200 (тосты/бар)
     readonly property int glitchPanel: 350
