@@ -18,7 +18,7 @@
 import QtQuick
 import Quickshell
 import ".."
-import "../kit"
+import "../kit" as Kit
 import "datefmt.js" as DateFmt
 
 Item {
@@ -133,7 +133,7 @@ Item {
                 height: 22
                 anchors.verticalCenter: parent.verticalCenter
                 color: prevMa.containsMouse || prevMa.pressed ? Theme.raise2 : Theme.raise
-                Icon { name: "chevron-left"; size: 13; color: Theme.txt2; anchors.centerIn: parent }
+                Kit.Icon { name: "chevron-left"; size: 13; color: Theme.txt2; anchors.centerIn: parent }
                 MouseArea {
                     id: prevMa
                     anchors.fill: parent
@@ -165,7 +165,7 @@ Item {
                 anchors.leftMargin: 4
                 anchors.verticalCenter: parent.verticalCenter
                 color: nextMa.containsMouse || nextMa.pressed ? Theme.raise2 : Theme.raise
-                Icon { name: "chevron-right"; size: 13; color: Theme.txt2; anchors.centerIn: parent }
+                Kit.Icon { name: "chevron-right"; size: 13; color: Theme.txt2; anchors.centerIn: parent }
                 MouseArea {
                     id: nextMa
                     anchors.fill: parent

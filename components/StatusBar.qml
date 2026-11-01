@@ -16,7 +16,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import ".."
-import "../kit"
+import "../kit" as Kit
 import "datefmt.js" as DateFmt
 
 Item {

@@ -81,11 +81,6 @@ Singleton {
         console.info("[archui] bar closed (timeout)")
     }
 
-    function dismissToasts() {
-        // Задача 3 (NotifStore): сброс стека тостов. Пока каркас — лог.
-        console.info("[archui] dismissToasts: stub (задача 3)")
-    }
-
     function setDnd(on) {
         persist.dnd = on
         console.info("[archui] dnd " + (on ? "on" : "off"))

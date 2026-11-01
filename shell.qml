@@ -10,10 +10,65 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import "kit"
+import "kit" as Kit
 
 ShellRoot {
     id: root
+
+    // Тумблер DND (ANALYSIS §5.5 .sw: 32×18, бегунок 14×14, 160ms — Motion.dndToggle)
+    component DndToggle: Rectangle {
+        id: tg
+        property bool on: false
+        width: 32
+        height: 18
+        color: tg.on ? Theme.invBg : Theme.raise
+
+        Rectangle {
+            x: tg.on ? 16 : 2
+            anchors.verticalCenter: parent.verticalCenter
+            width: 14
+            height: 14
+            color: tg.on ? Theme.invFg : Theme.txt2
+            Behavior on x {
+                NumberAnimation {
+                    duration: Motion.dndToggle
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Motion.apple
+                }
+            }
+        }
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: LayoutState.setDnd(!tg.on)
+        }
+    }
+
+    // Кнопка Clear (h26, .btn)
+    component ClearButton: Rectangle {
+        id: cb
+        signal clicked()
+        readonly property bool hovered: cbMa.containsMouse
+        width: cbText.width + 16
+        height: 26
+        color: cb.hovered ? Theme.raise2 : Theme.raise
+        Text {
+            id: cbText
+            anchors.centerIn: parent
+            text: "CLEAR"
+            color: Theme.txt2
+            font.family: Theme.font
+            font.pixelSize: 10
+            font.weight: Font.Medium
+        }
+        MouseArea {
+            id: cbMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: cb.clicked()
+        }
+    }
 
     Component.onCompleted: console.info(
         `[archui] shell loaded · screen ${Quickshell.screens[0].name} ` +
@@ -21,7 +76,7 @@ ShellRoot {
         `@${Quickshell.screens[0].scale}`)
 
     // --------------------------------------------------------------- СЛОТ A
-    Panel {
+    Kit.Panel {
         id: colA
         slot: "A"
         panels: ["docker", "taskmgr"]
@@ -72,7 +127,7 @@ ShellRoot {
     }
 
     // --------------------------------------------------------------- СЛОТ B
-    Panel {
+    Kit.Panel {
         id: colB
         slot: "B"
         panels: ["launcher", "logout", "sysinfo"]
@@ -123,7 +178,9 @@ ShellRoot {
     }
 
     // --------------------------------------------------------------- СЛОТ C
-    Panel {
+    // head/foot слота общие (kit/Panel): контент notifcenter показывается, когда
+    // активен он (задача 8 добавит свои head'ы для chat/aimgr).
+    Kit.Panel {
         id: colC
         slot: "C"
         panels: ["chat", "aimgr", "notifcenter"]
@@ -136,7 +193,9 @@ ShellRoot {
 
         head: Component {
             Item {
+                // head по умолчанию (chat/aimgr до задачи 8)
                 Text {
+                    visible: colC.panelId !== "notifcenter"
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -146,9 +205,57 @@ ShellRoot {
                     font.pixelSize: 11
                     font.letterSpacing: 1
                 }
+
+                // notifcenter (ANALYSIS §5.5): i-bell + NOTIFICATIONS · dnd · Clear
+                Row {
+                    visible: colC.panelId === "notifcenter"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Kit.Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "bell"
+                        size: 13
+                        color: Theme.txt2
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "NOTIFICATIONS"
+                        color: Theme.txt2
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.letterSpacing: 1
+                    }
+                }
+
+                Row {
+                    visible: colC.panelId === "notifcenter"
+                    anchors.right: parent.right
+                    anchors.rightMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "dnd"
+                        color: Theme.dim
+                        font.family: Theme.font
+                        font.pixelSize: 8
+                    }
+                    DndToggle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        on: NotifStore.dnd
+                    }
+                    ClearButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        onClicked: NotifStore.clearHistory()
+                    }
+                }
             }
         }
-        body: Component { Placeholder {} }
+        body: Component { NotifCenter {} }
         foot: Component {
             Item {
                 Text {
@@ -164,7 +271,10 @@ ShellRoot {
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "slot c"
+                    text: colC.panelId === "notifcenter"
+                          ? NotifStore.historyCount + " unread · dnd "
+                            + (NotifStore.dnd ? "on" : "off")
+                          : "slot c"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9
@@ -234,7 +344,9 @@ ShellRoot {
     }
 
     // --------------------------------------------------------------- TOASTS
-    // Пустой хост стека тостов (задача 3): тостов нет → маска пустая, ввод насквозь.
+    // Стек тостов 276 top-right (задача 4). Высота окна едет за стеком; маска —
+    // прямоугольник стека при наличии тостов, пустая при отсутствии (SPEC §2 —
+    // от visible-факта, не от анимации; урок бара T3).
     PanelWindow {
         id: toasts
         WlrLayershell.namespace: "archui:toasts"
@@ -242,11 +354,16 @@ ShellRoot {
         margins.right: 24
         margins.top: 24
         implicitWidth: 276
-        implicitHeight: 300
+        implicitHeight: Math.max(1, toastContent.contentHeight)
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         visible: true
-        mask: Region { width: 0; height: 0 }
+        mask: Region {
+            width: NotifStore.showing ? toasts.width : 0
+            height: NotifStore.showing ? toasts.height : 0
+        }
+
+        Toasts { id: toastContent; anchors.fill: parent }
     }
 
     // ------------------------------------------------------------------- IPC
@@ -255,7 +372,7 @@ ShellRoot {
 
         function toggle(panelId: string): void { LayoutState.toggle(panelId) }
         function toggleBar(): void { LayoutState.toggleBar() }
-        function dismissToasts(): void { LayoutState.dismissToasts() }
+        function dismissToasts(): void { NotifStore.dismissAll() }
         function dnd(on: bool): void { LayoutState.setDnd(on) }
     }
 
@@ -269,3 +386,4 @@ ShellRoot {
         onPressed: LayoutState.toggle("launcher")
     }
 }
+
