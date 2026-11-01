@@ -395,17 +395,141 @@ ShellRoot {
 
         head: Component {
             Item {
-                // head по умолчанию (chat/aimgr до задачи 8)
+                // head по умолчанию (пустой слот)
                 Text {
-                    visible: colC.panelId !== "notifcenter"
+                    visible: colC.panelId === ""
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: colC.panelId === "" ? "SLOT C" : colC.panelId.toUpperCase()
+                    text: "SLOT C"
                     color: Theme.txt2
                     font.family: Theme.font
                     font.pixelSize: 11
                     font.letterSpacing: 1
+                }
+
+                // head чата (DESIGN §4 «chat»): бот+CHAT слева; справа чип модели
+                // (инверсия), чип треда, «+» (New thread)
+                Row {
+                    visible: colC.panelId === "chat"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Kit.Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "bot"
+                        size: 13
+                        color: Theme.txt2
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "CHAT"
+                        color: Theme.txt2
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.letterSpacing: 1
+                    }
+                }
+
+                Row {
+                    visible: colC.panelId === "chat"
+                    anchors.right: parent.right
+                    anchors.rightMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    // чип модели (инверсия) — клик открывает aimgr (выбор модели)
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: cModelText.width + 16
+                        height: 22
+                        radius: 2
+                        color: Theme.invBg
+                        border.width: 0
+                        Text {
+                            id: cModelText
+                            anchors.centerIn: parent
+                            text: AgentBridge.currentModel ? AgentBridge.currentModel.name : "—"
+                            color: Theme.invFg
+                            font.family: Theme.font
+                            font.pixelSize: 10
+                            font.weight: Font.Medium
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: LayoutState.openIn("C", "aimgr")
+                        }
+                    }
+                    Kit.Chip {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: AgentBridge.generating ? "streaming"
+                            : AgentBridge.dead ? "died"
+                            : AgentBridge.stopped ? "stopped"
+                            : AgentBridge.connected ? "thread · " + AgentBridge.messageCount
+                            : "offline"
+                        onClicked: AgentBridge.ensureStarted()
+                    }
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 22
+                        height: 22
+                        radius: 2
+                        color: cPlusMa.containsMouse ? Theme.raise2 : Theme.raise
+                        border.width: 0
+                        Kit.Icon {
+                            anchors.centerIn: parent
+                            name: "plus"
+                            size: 12
+                            color: Theme.txt2
+                        }
+                        MouseArea {
+                            id: cPlusMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: AgentBridge.newThread()
+                        }
+                    }
+                }
+
+                // head aimgr: AImgr слева, чип contextUsage справа (SPEC §6)
+                Row {
+                    visible: colC.panelId === "aimgr"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Kit.Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "sparkles"
+                        size: 13
+                        color: Theme.txt2
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "AGENT MGR"
+                        color: Theme.txt2
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.letterSpacing: 1
+                    }
+                }
+
+                Text {
+                    visible: colC.panelId === "aimgr"
+                    anchors.right: parent.right
+                    anchors.rightMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: AgentBridge.contextUsage && AgentBridge.contextUsage.percent !== null
+                          ? "context " + Math.round(AgentBridge.contextUsage.percent) + "%"
+                          : "context —"
+                    color: Theme.dim
+                    font.family: Theme.font
+                    font.pixelSize: 9
                 }
 
                 // notifcenter (ANALYSIS §5.5): i-bell + NOTIFICATIONS · dnd · Clear
@@ -457,7 +581,27 @@ ShellRoot {
                 }
             }
         }
-        body: Component { NotifCenter {} }
+        body: Component {
+            Item {
+                id: bodyC
+                property string panelId: ""
+                Loader {
+                    anchors.fill: parent
+                    active: bodyC.panelId === "notifcenter"
+                    sourceComponent: NotifCenter {}
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: bodyC.panelId === "chat"
+                    sourceComponent: AgentChat {}
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: bodyC.panelId === "aimgr"
+                    sourceComponent: AgentMgr {}
+                }
+            }
+        }
         foot: Component {
             Item {
                 Text {
@@ -476,6 +620,11 @@ ShellRoot {
                     text: colC.panelId === "notifcenter"
                           ? NotifStore.historyCount + " unread · dnd "
                             + (NotifStore.dnd ? "on" : "off")
+                          : colC.panelId === "chat" || colC.panelId === "aimgr"
+                          ? (AgentBridge.statusText.length > 0 ? AgentBridge.statusText
+                             : AgentBridge.currentModel
+                               ? AgentBridge.currentModel.provider + "/" + AgentBridge.currentModel.id
+                               : (AgentBridge.connected ? "connected" : "offline"))
                           : "slot c"
                     color: Theme.dim
                     font.family: Theme.font
