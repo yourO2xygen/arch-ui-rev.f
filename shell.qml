@@ -635,11 +635,14 @@ ShellRoot {
     }
 
     // ------------------------------------------------------------- CALENDAR
-    // Персистентен (SPEC §2). Свертывание до чипа 264×40 — живое состояние
-    // (components/Calendar.qml, не персистится); высота окна едет за ним.
+    // Скрыт по умолчанию (виден только по хоткею/IPC toggleCalendar — РФ на
+    // «календарь показывается всегда»). Свертывание до чипа 264×40 — живое
+    // состояние (components/Calendar.qml, не персистится); высота окна едет
+    // за ним. Видимость — как у слотовых панелей: imperative visible-тумблер.
     PanelWindow {
         id: calendar
         WlrLayershell.namespace: "archui:calendar"
+        visible: false
         anchors { left: true; top: true }
         margins.left: 24
         margins.top: 24
@@ -727,7 +730,12 @@ ShellRoot {
         function dnd(on: bool): void { LayoutState.setDnd(on) }
         // Хоткеи SPEC §12: тумблеры (бинд не знает текущего состояния)
         function dndToggle(): void { LayoutState.setDnd(!LayoutState.dnd) }
-        function toggleCalendar(): void { calendarContent.collapsed = !calendarContent.collapsed }
+        // Показать/скрыть окно целиком; при показе — всегда развёрнутым
+        // (свертка в чип остаётся живым состоянием на время показа).
+        function toggleCalendar(): void {
+            if (!calendar.visible) calendarContent.collapsed = false
+            calendar.visible = !calendar.visible
+        }
 
     }
 

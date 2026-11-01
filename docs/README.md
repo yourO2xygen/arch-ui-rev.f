@@ -47,7 +47,7 @@ qs -c shell --no-duplicate --daemonize
 ```
 qs -c shell ipc call archui toggle <panelId>   # panelId: docker|taskmgr|launcher|logout|sysinfo|chat|aimgr|notifcenter
 qs -c shell ipc call archui toggleBar          # статус-бар (транзиент 2.8s)
-qs -c shell ipc call archui toggleCalendar     # свернуть/развернуть календарь
+qs -c shell ipc call archui toggleCalendar     # показать/скрыть календарь
 qs -c shell ipc call archui dndToggle          # DND on/off
 qs -c shell ipc call archui dnd <true|false>   # DND явно
 qs -c shell ipc call archui dismissToasts      # убрать все тосты
@@ -65,7 +65,7 @@ qs -c shell ipc call archui dismissToasts      # убрать все тосты
 |---|---|
 | SUPER+R | лаунчер (GlobalShortcut) |
 | SUPER+S / D / T | sysinfo / docker / taskmgr |
-| SUPER+C / L | свернуть календарь / logout |
+| SUPER+C / L | показать/скрыть календарь / logout |
 | SUPER+A / SUPER+SHIFT+A | чат / менеджер агента |
 | SUPER+N / SUPER+SHIFT+N | центр уведомлений / DND toggle |
 | SUPER+SHIFT+S | статус-бар |
