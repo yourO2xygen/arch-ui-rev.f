@@ -303,10 +303,36 @@ ShellRoot {
         }
         // launcher/logout (задача 7): launcher — оверлей на всё окно (dock у нижней
         // кромки слота), logout — панель в body; подвал logout: user · uptime.
+        // Деактивация оверлея отсрочена: при replace launcher→чужое Loader гаснет
+        // через Motion.replaceExit (иначе дырка 0–120ms — старая ячейка уже ушла,
+        // оверлей снят мгновенно); при простом закрытии — с концом волны
+        // (Motion.panelOpen), чтобы overlay уходил вместе с волной, а не висел.
         overlay: Component {
-            Loader {
-                active: colB.panelId === "launcher"
-                sourceComponent: Launcher {}
+            Item {
+                id: ovRoot
+                readonly property bool wantActive: colB.panelId === "launcher"
+                property bool mounted: wantActive
+
+                onWantActiveChanged: {
+                    if (wantActive) {
+                        hideTimer.stop()
+                        mounted = true
+                    } else {
+                        hideTimer.interval = colB.open ? Motion.replaceExit : Motion.panelOpen
+                        hideTimer.restart()
+                    }
+                }
+
+                Timer {
+                    id: hideTimer
+                    onTriggered: ovRoot.mounted = false
+                }
+
+                Loader {
+                    active: ovRoot.mounted
+                    anchors.fill: parent
+                    sourceComponent: Launcher {}
+                }
             }
         }
         foot: Component {

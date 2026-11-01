@@ -63,9 +63,40 @@ Item {
         root.selected = 0
     }
 
-    // Exec= с field codes (%f/%U/%%) — коды вырезаем, запускатьargs нельзя.
-    function _cleanExec(exec) {
-        return exec.split(/\s+/).filter(t => !/^%[a-zA-Z%]$/.test(t)).join(" ")
+    // Токенизация Exec= по desktop-entry-спеке: кавычки уважаются («--title "Hello
+    // World"» → один аргумент), обратный слэш внутри кавычек экранирует; field codes
+    // (%f/%F/%U/…, в т.ч. внутри токенов) вырезаются на этапе токенизации, %% → «%».
+    // Результат — argv для execDetached(list).
+    function _tokenizeExec(exec) {
+        const argv = []
+        let cur = "", quoted = false
+        for (let i = 0; i < exec.length; i++) {
+            const c = exec[i]
+            if (quoted) {
+                if (c === "\"") quoted = false
+                else if (c === "\\" && i + 1 < exec.length) cur += exec[++i]
+                else cur += c
+            } else if (c === "\"") {
+                quoted = true
+            } else if (/\s/.test(c)) {
+                if (cur.length > 0) { argv.push(cur); cur = "" }
+            } else cur += c
+        }
+        if (cur.length > 0) argv.push(cur)
+
+        const out = []
+        for (let t = 0; t < argv.length; t++) {
+            let s = "", i = 0
+            const tok = argv[t]
+            while (i < tok.length) {
+                if (tok[i] === "%") {
+                    if (tok[i + 1] === "%") { s += "%"; i += 2 }
+                    else i += 2             // field code — вырезаем
+                } else s += tok[i++]
+            }
+            if (s.length > 0) out.push(s)
+        }
+        return out
     }
 
     function _move(delta) {
@@ -78,10 +109,12 @@ Item {
     function _launch() {
         const e = root.results[root.selected]
         if (!e) return
+        const argv = _tokenizeExec(e.execString)
+        if (argv.length === 0) return
         root._flashIndex = root.selected
         // вспышка строки видна глазу — закрытие после неё
         flashTimer.restart()
-        Quickshell.execDetached(root._cleanExec(e.execString))
+        Quickshell.execDetached(argv)
     }
 
     function _close() {
@@ -93,7 +126,9 @@ Item {
         interval: Motion.glitchLite
         onTriggered: {
             root._flashIndex = -1
-            root._close()
+            // к моменту срабатывания слот могли заменить (launcher → чужое) —
+            // закрываем только свой panelId
+            if (LayoutState.slots.B === "launcher") root._close()
         }
     }
 
@@ -237,7 +272,7 @@ Item {
                     border.width: 0
                     SequentialAnimation on opacity {
                         running: row.flashing
-                        NumberAnimation { to: 0.85; duration: 30 }
+                        NumberAnimation { to: 0.85; duration: Motion.flashIn }
                         NumberAnimation { to: 0; duration: Motion.glitchLite }
                     }
                 }
@@ -256,4 +291,6 @@ Item {
             }
         }
     }
+
+
 }

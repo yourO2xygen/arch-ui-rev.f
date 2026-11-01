@@ -11,6 +11,7 @@
 // Подвал (head/foot в shell.qml): user · uptime.
 
 import QtQuick
+import Quickshell
 import Quickshell.Io
 import ".."
 import "../kit" as Kit
@@ -39,13 +40,33 @@ Item {
     function _activate(id) {
         const cmd = _commandFor(id)
         if (cmd.length === 0) return
+        // гейт на повторный тап/другую плитку, пока halt-фейд ещё идёт
+        if (_pending.length > 0) return
         if (id === "reboot" || id === "power") {
             // короткий фейд «system halted» — экран всё равно уйдёт; оверлей на случай
-            // медленного выключения (DESIGN §4)
+            // медленного выключения (DESIGN §4). Отмена при replace панели во время
+            // фейда — приемлема (юзер передумал): таймер умирает вместе с объектом.
+            // КАНАЛ ЗАПУСКА — только таймер (SequentialAnimation.onStopped эмитится
+            // и по stop() — немедленный poweroff минуя фейд).
             _pending = id
             halt.run(cmd)
+            haltTimer.restart()
         } else {
-            Quickshell.execDetached(cmd)
+            Quickshell.execDetached(cmd.split(" "))
+        }
+    }
+
+    // Канал запуска halt-команды — ТОЛЬКО таймер (не animation.onStopped: stop()
+    // эмитит stopped → немедленный poweroff минуя фейд + повтор).
+    Timer {
+        id: haltTimer
+        interval: Motion.haltFade / 2
+        onTriggered: {
+            if (root._pending.length === 0) return
+            const cmd = root._commandFor(root._pending)
+            root._pending = ""
+            if (cmd.length > 0) Quickshell.execDetached(cmd.split(" "))
+            halt.fadeOut()   // панель возвращается, если сессия ещё жива (медленный shutdown / тест)
         }
     }
 
@@ -120,12 +141,14 @@ Item {
         z: 10
         border.width: 0
 
-        property string _cmd: ""
-
         function run(cmd) {
             console.info("[archui] logout: halt overlay → " + cmd)
-            _cmd = cmd
             haltIn.restart()
+        }
+
+        // Только визуальный фейд; запуск команды — haltTimer снаружи (I1).
+        function fadeOut() {
+            haltOut.restart()
         }
 
         SequentialAnimation {
@@ -133,7 +156,13 @@ Item {
             NumberAnimation {
                 target: haltRect; property: "opacity"; to: 1; duration: Motion.haltFade / 2
             }
-            onStopped: if (haltRect._cmd.length > 0) Quickshell.execDetached(haltRect._cmd)
+        }
+
+        SequentialAnimation {
+            id: haltOut
+            NumberAnimation {
+                target: haltRect; property: "opacity"; to: 0; duration: Motion.haltFade / 2
+            }
         }
 
         Text {
@@ -145,4 +174,6 @@ Item {
             font.letterSpacing: 1
         }
     }
+
+
 }

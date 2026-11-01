@@ -72,7 +72,7 @@ PanelWindow {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     // Клавиатура — по клику в панель (фильтры/поля T5+); хоткеи Hyprland не страдают.
-    // Exclusive придёт лаунчеру в T7.
+    // Исключение — слот B: Exclusive на время открытия лаунчера (биндинг в shell.qml).
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     visible: false
 
