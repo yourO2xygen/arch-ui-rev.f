@@ -510,6 +510,7 @@ ShellRoot {
         function toggleBar(): void { LayoutState.toggleBar() }
         function dismissToasts(): void { NotifStore.dismissAll() }
         function dnd(on: bool): void { LayoutState.setDnd(on) }
+
     }
 
     // Реакция на хоткей — задача 7 (обработчик запуска лаунчера); бинд в hyprland.conf:

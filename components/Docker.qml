@@ -167,20 +167,24 @@ Item {
                                 color: Theme.txt
                             }
 
-                            Row {
-                                anchors.fill: parent
+                            Kit.Dot {
+                                anchors.left: parent.left
                                 anchors.leftMargin: 10
-                                anchors.rightMargin: 8
-                                spacing: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                state: cRow.c.state === "running" ? "on"
+                                     : cRow.c.state === "paused" ? "idle" : "off"
+                            }
+                            // имя + образ (DESIGN §4: dot/имя/образ/порт)
+                            Column {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 26
+                                anchors.right: parent.right
+                                anchors.rightMargin: 56
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 1
 
-                                Kit.Dot {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    state: cRow.c.state === "running" ? "on"
-                                         : cRow.c.state === "paused" ? "idle" : "off"
-                                }
                                 Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: parent.width - parent.spacing * 2 - 46
+                                    width: parent.width
                                     text: cRow.c.name
                                     color: cRow.isSel ? Theme.txt : Theme.txt2
                                     elide: Text.ElideRight
@@ -188,15 +192,25 @@ Item {
                                     font.pixelSize: 11
                                 }
                                 Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: 46
-                                    text: root.portOf(cRow.c.ports)
+                                    width: parent.width
+                                    text: cRow.c.image
                                     color: Theme.dim
-                                    elide: Text.ElideRight
-                                    horizontalAlignment: Text.AlignRight
+                                    elide: Text.ElideMiddle
                                     font.family: Theme.font
-                                    font.pixelSize: 9
+                                    font.pixelSize: 8
                                 }
+                            }
+                            Text {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 46
+                                text: root.portOf(cRow.c.ports)
+                                color: Theme.dim
+                                elide: Text.ElideRight
+                                horizontalAlignment: Text.AlignRight
+                                font.family: Theme.font
+                                font.pixelSize: 9
                             }
                             // разделитель 1px (ANALYSIS: список с разделителями)
                             Rectangle {
@@ -332,7 +346,7 @@ Item {
                                     Math.max(0, logView.contentHeight - logView.height) })
 
                         Text {
-                            visible: DockerMon.logLines.length === 0
+                            visible: logRepeater.count === 0
                             anchors.top: parent.top
                             anchors.topMargin: 8
                             text: root.sel && root.sel.state !== "running"
@@ -349,7 +363,10 @@ Item {
                             anchors.right: parent.right
 
                             Repeater {
-                                model: DockerMon.logLines
+                                id: logRepeater
+                                // ScriptModel со стабильными строками-объектами:
+                                // burst не пересоздаёт делегаты (паттерн ProcMon)
+                                model: DockerMon.logModel
 
                                 // строка 10px × 1.7 = 17px; error — инверсия
                                 delegate: Item {
@@ -367,7 +384,7 @@ Item {
                                     Row {
                                         anchors.fill: parent
                                         Text {
-                                            width: 64
+                                            width: 60
                                             height: 17
                                             text: ln.ts
                                             color: ln.level === "error"
@@ -376,8 +393,20 @@ Item {
                                             font.pixelSize: 10
                                             verticalAlignment: Text.AlignVCenter
                                         }
+                                        // источник (DESIGN §4: время dim, источник txt2)
                                         Text {
-                                            width: parent.width - 64
+                                            width: 42
+                                            height: 17
+                                            text: ln.src
+                                            color: ln.level === "error"
+                                                   ? Theme.invFg : Theme.txt2
+                                            elide: Text.ElideRight
+                                            font.family: Theme.font
+                                            font.pixelSize: 8
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                        Text {
+                                            width: parent.width - 102
                                             height: 17
                                             text: ln.text
                                             color: ln.level === "error" ? Theme.invFg
