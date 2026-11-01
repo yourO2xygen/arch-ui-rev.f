@@ -1,7 +1,7 @@
 // ARCH·UI v2 — components/Docker.qml (SPEC §4, DESIGN §4 «docker»)
 // Панель контейнеров (слот A, panelId "docker"): слева список 184px (Dot состояния,
 // имя, порт справа, разделитель 1px), справа тулбар h26 (имя 12/600 + чип состояния +
-// start/stop/restart/attach) и табы Logs / Resources / Ports. Logs — терминальный
+// start/stop/restart/logs) и табы Logs / Resources / Ports. Logs — терминальный
 // блок 10px/1.7: время dim, warn — txt2 bold, error — инверсия. Resources — 4 строки
 // «метка значение + SegBar» + health. Данные — push из DockerMon.
 //
@@ -279,7 +279,11 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 2
 
-                        // start / stop / restart / attach (attach → таб Logs)
+                        // start / stop / restart (иконки-конвенции) + LOGS-кнопка.
+                        // Была безликая иконка terminal — назначение было нечитаемо
+                        // (тултипов в шелле нет): заменили на самодостаточный лейбл
+                        // (Task 15). Кнопка переключает на таб логов выбранного
+                        // контейнера (прежний «attach»).
                         IconBtn { icon: "play"; tip: "start"
                             enabled: root.sel && root.sel.state !== "running"
                             onClicked: DockerMon.action("start", root.selected) }
@@ -289,10 +293,14 @@ Item {
                         IconBtn { icon: "refresh-cw"; tip: "restart"
                             enabled: root.sel && root.sel.state === "running"
                             onClicked: DockerMon.action("restart", root.selected) }
-                        IconBtn { icon: "terminal"; tip: "attach"
+                        Kit.Chip {
+                            anchors.verticalCenter: parent.verticalCenter
                             enabled: root.sel !== null
+                            opacity: root.sel !== null ? 1 : 0.4
                             selected: root.tab === "logs"
-                            onClicked: DockerMon.tab = "logs" }
+                            text: "LOGS"
+                            onClicked: DockerMon.tab = "logs"
+                        }
                     }
                 }
 

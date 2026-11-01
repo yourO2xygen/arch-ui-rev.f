@@ -94,6 +94,12 @@ PanelWindow {
         opacity: 0
         scale: 0.97
         transformOrigin: Item.Center
+        // Фокус внутри окна (OnDemand активируется кликом в панель), чтобы Esc
+        // дошёл сюда даже без клика в конкретный элемент ввода.
+        focus: true
+        // Esc — штатное закрытие слота (Task 15). Если фокус в kit/Field, Esc
+        // съедает поле (escPressed) и панель не закрывается — осознанно.
+        Keys.onEscapePressed: LayoutState.closeSlot(panel.slot)
 
         // Глич появления (Task 9): слой+шейдер ТОЛЬКО пока идёт переход (_glitchRun);
         // вне перехода обычный рендер, GPU-налога нет (SPEC §8). Theme.glitch=false —

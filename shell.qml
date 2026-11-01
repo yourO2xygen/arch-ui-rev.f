@@ -91,9 +91,12 @@ ShellRoot {
 
         head: Component {
             Item {
-                // head по умолчанию (docker до задачи 6)
+                // head по умолчанию (docker до задачи 6).
+                // Пустой panelId — не рендерим «SLOT A»: фолбэк-надпись моргала в
+                // переходах слота (Task 15).
                 Text {
-                    visible: colA.panelId !== "taskmgr"
+                    visible: colA.panelId !== ""
+                             && colA.panelId !== "taskmgr"
                              && colA.panelId !== "docker"
                              && colA.panelId !== "sysinfo"
                     anchors.left: parent.left
@@ -220,7 +223,10 @@ ShellRoot {
         }
         foot: Component {
             Item {
+                // Пустой panelId (закрытие слота) — футер не флэшит фолбэки
+                // («archui» / «slot a», Task 15)
                 Text {
+                    visible: colA.panelId !== ""
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -242,6 +248,7 @@ ShellRoot {
                     font.pixelSize: 9
                 }
                 Text {
+                    visible: colA.panelId !== ""
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -275,9 +282,11 @@ ShellRoot {
 
         head: Component {
             Item {
-                // head по умолчанию (logout; launcher — оверлей без head, задача 7)
+                // head по умолчанию (logout; launcher — оверлей без head, задача 7).
+                // Пустой panelId — не рендерим «SLOT B» (флэш в переходах, Task 15)
                 Text {
                     visible: colB.panelId !== "launcher"
+                             && colB.panelId !== ""
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -349,6 +358,7 @@ ShellRoot {
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
                     visible: colB.panelId !== "launcher"
+                             && colB.panelId !== ""
                     text: colB.panelId === "logout"
                           ? Quickshell.env("USER") + " · up "
                             + SysMon.fmtUptime(SysMon.uptimeSec)
@@ -362,6 +372,7 @@ ShellRoot {
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
                     visible: colB.panelId !== "launcher"
+                             && colB.panelId !== ""
                     text: "slot b"
                     color: Theme.dim
                     font.family: Theme.font
@@ -384,9 +395,40 @@ ShellRoot {
         }
     }
 
+    // Дисмисс слот-панелей (Task 15): клик ЛКМ вне открытых панелей archui
+    // закрывает ВСЕ видимые панели слот-типа (слоты + календарь + бар) штатной
+    // хореографией LayoutState. Идиома как у лаунчера: HyprlandFocusGrab пассивно
+    // белит список окон (обычный ввод сохраняется), клик вне списка гасит grab
+    // (onCleared). keyboardFocus слотов остаётся OnDemand — хоткеи Hyprland и фокус
+    // тайлов не воруются. Grab активирован, пока открыта хоть одна панель; все
+    // close* идемпотентны, поэтому повторный onCleared (гашение grab при штатном
+    // закрытии) безвреден. Лаунчер закрывается собственным grab'ом выше — в
+    // active-условие не входит, чтобы с ним не пересекаться.
+    HyprlandFocusGrab {
+        active: colA.open
+                || LayoutState.slots.B === "logout"
+                || colC.open
+                || calendar.visible
+                || LayoutState.slots.bar !== null
+        windows: [colA, colB, colC, calendar, bar]
+        onCleared: {
+            if (colA.open || LayoutState.slots.B !== null || colC.open
+                || calendar.visible || LayoutState.slots.bar !== null) {
+                console.info("[archui] outside click — dismissing panels")
+                LayoutState.closeSlot("A")
+                LayoutState.closeSlot("B")
+                LayoutState.closeSlot("C")
+                calendar.visible = false
+                LayoutState.closeBar()
+            }
+        }
+    }
+
     // --------------------------------------------------------------- СЛОТ C
     // head/foot слота общие (kit/Panel): контент notifcenter показывается, когда
     // активен он (задача 8 добавит свои head'ы для chat/aimgr).
+    // Дебаг-фолбэк «SLOT C» (head при пустом panelId) убран: слот-окно видно
+    // только при открытой панели, надпись лишь моргала в переходах (Task 15).
     Kit.Panel {
         id: colC
         slot: "C"
@@ -400,19 +442,6 @@ ShellRoot {
 
         head: Component {
             Item {
-                // head по умолчанию (пустой слот)
-                Text {
-                    visible: colC.panelId === ""
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "SLOT C"
-                    color: Theme.txt2
-                    font.family: Theme.font
-                    font.pixelSize: 11
-                    font.letterSpacing: 1
-                }
-
                 // head чата (DESIGN §4 «chat»): бот+CHAT слева; справа чип модели
                 // (инверсия), чип треда, «+» (New thread)
                 Row {
@@ -609,19 +638,13 @@ ShellRoot {
         }
         foot: Component {
             Item {
-                Text {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "archui"
-                    color: Theme.dim
-                    font.family: Theme.font
-                    font.pixelSize: 9
-                }
+                // Левого лейбла «archui» больше нет (Task 15 — юзер просил убрать);
+                // счётчики справа остаются, пустой panelId их не рендерит.
                 Text {
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
+                    visible: colC.panelId !== ""
                     text: colC.panelId === "notifcenter"
                           ? NotifStore.historyCount + " unread · dnd "
                             + (NotifStore.dnd ? "on" : "off")
