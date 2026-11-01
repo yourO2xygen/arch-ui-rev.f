@@ -89,7 +89,9 @@ ShellRoot {
 
         head: Component {
             Item {
+                // head по умолчанию (docker до задачи 6)
                 Text {
+                    visible: colA.panelId !== "taskmgr"
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -99,16 +101,60 @@ ShellRoot {
                     font.pixelSize: 11
                     font.letterSpacing: 1
                 }
+
+                // taskmgr (ANALYSIS 5.x): i-activity + TASKMGR
+                Row {
+                    visible: colA.panelId === "taskmgr"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Kit.Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "activity"
+                        size: 13
+                        color: Theme.txt2
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "TASKMGR"
+                        color: Theme.txt2
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.letterSpacing: 1
+                    }
+                }
             }
         }
-        body: Component { Placeholder {} }
+        // taskmgr — реальная панель (задача 5); прочие panelId слота (docker) — заглушка
+        body: Component {
+            Item {
+                id: bodyA
+                property string panelId: ""
+
+                Loader {
+                    anchors.fill: parent
+                    active: bodyA.panelId === "taskmgr"
+                    sourceComponent: TaskMgr {}
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: bodyA.panelId !== "taskmgr"
+                    sourceComponent: Placeholder { panelId: bodyA.panelId }
+                }
+            }
+        }
         foot: Component {
             Item {
                 Text {
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "archui"
+                    text: colA.panelId === "taskmgr"
+                          ? ProcMon.view.length + " / " + ProcMon.procs.length
+                            + " · sorted by " + ProcMon.sortBy
+                          : "archui"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9
@@ -117,7 +163,7 @@ ShellRoot {
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "slot a"
+                    text: colA.panelId === "taskmgr" ? "del · term" : "slot a"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9
@@ -140,7 +186,9 @@ ShellRoot {
 
         head: Component {
             Item {
+                // head по умолчанию (launcher/logout до задачи 7)
                 Text {
+                    visible: colB.panelId !== "sysinfo"
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -150,16 +198,66 @@ ShellRoot {
                     font.pixelSize: 11
                     font.letterSpacing: 1
                 }
+
+                // sysinfo (ANALYSIS 5.3): i-gauge + SYSINFO · справа чип uptime
+                Row {
+                    visible: colB.panelId === "sysinfo"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Kit.Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "gauge"
+                        size: 13
+                        color: Theme.txt2
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "SYSINFO"
+                        color: Theme.txt2
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.letterSpacing: 1
+                    }
+                }
+
+                Kit.Chip {
+                    visible: colB.panelId === "sysinfo"
+                    anchors.right: parent.right
+                    anchors.rightMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "up " + SysMon.fmtUptime(SysMon.uptimeSec)
+                }
             }
         }
-        body: Component { Placeholder {} }
+        // sysinfo — реальная панель (задача 5); launcher/logout — заглушки до задачи 7
+        body: Component {
+            Item {
+                id: bodyB
+                property string panelId: ""
+
+                Loader {
+                    anchors.fill: parent
+                    active: bodyB.panelId === "sysinfo"
+                    sourceComponent: SysInfo {}
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: bodyB.panelId !== "sysinfo"
+                    sourceComponent: Placeholder { panelId: bodyB.panelId }
+                }
+            }
+        }
         foot: Component {
             Item {
                 Text {
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "archui"
+                    text: colB.panelId === "sysinfo"
+                          ? Quickshell.env("USER") + "@" + SysMon.hostName : "archui"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9
@@ -168,7 +266,7 @@ ShellRoot {
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "slot b"
+                    text: colB.panelId === "sysinfo" ? "kernel " + SysMon.kernel : "slot b"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9
