@@ -6,8 +6,8 @@
 // Ввод/маска окна живёт в shell.qml: маска — прямоугольник стека при наличии тостов,
 // пустая при отсутствии (урок бара: от visible-факта, не от анимации).
 //
-// Появление — lite-вариант глича (fade + slide 200ms, Motion.glitchLite); полный
-// GlitchFX подключит задача 9.
+// Появление — lite-вариант глича (Task 9): flicker + x-jitter ±2px + 2 инверсные
+// полосы за Motion.glitchLite (200ms), БЕЗ шейдера — тосты частые, GPU не тратим.
 //
 // Использование (shell.qml): Toasts { id: toastsContent; anchors.fill: parent }
 //   окно: implicitHeight: Math.max(1, toastsContent.contentHeight)
@@ -91,10 +91,53 @@ Item {
             x = 12
             enterIn.restart()
         }
-        ParallelAnimation {
+        // lite-глич: flicker + x-jitter + 2 инверсные полосы (монохром: Theme.txt)
+        Rectangle {
+            id: bandA
+            anchors.left: parent.left
+            anchors.right: parent.right
+            y: parent.height * 0.22
+            height: 2
+            color: Theme.txt
+            opacity: 0
+            visible: opacity > 0
+        }
+        Rectangle {
+            id: bandB
+            anchors.left: parent.left
+            anchors.right: parent.right
+            y: parent.height * 0.58
+            height: 2
+            color: Theme.txt
+            opacity: 0
+            visible: opacity > 0
+        }
+        SequentialAnimation {
             id: enterIn
-            NumberAnimation { target: card; property: "opacity"; to: 1; duration: Motion.glitchLite }
-            NumberAnimation { target: card; property: "x"; to: 0; duration: Motion.glitchLite; easing.type: Easing.Bezier; easing.bezierCurve: Motion.apple }
+            // суммарно Motion.glitchLite (200ms); под-шаги — доли токена
+            ParallelAnimation {
+                SequentialAnimation {
+                    NumberAnimation { target: card; property: "opacity"; to: 1; duration: 60 }
+                    NumberAnimation { target: card; property: "opacity"; to: 0.72; duration: 25 }
+                    NumberAnimation { target: card; property: "opacity"; to: 1; duration: 25 }
+                }
+                SequentialAnimation {
+                    NumberAnimation { target: card; property: "x"; to: 0; duration: 60; easing.type: Easing.Bezier; easing.bezierCurve: Motion.apple }
+                    NumberAnimation { target: card; property: "x"; to: -2; duration: 25 }
+                    NumberAnimation { target: card; property: "x"; to: 2; duration: 25 }
+                    NumberAnimation { target: card; property: "x"; to: 0; duration: 25 }
+                }
+                SequentialAnimation {
+                    PauseAnimation { duration: 40 }
+                    NumberAnimation { target: bandA; property: "opacity"; to: 0.9; duration: 30 }
+                    NumberAnimation { target: bandA; property: "opacity"; to: 0; duration: 50 }
+                }
+                SequentialAnimation {
+                    PauseAnimation { duration: 105 }
+                    NumberAnimation { target: bandB; property: "opacity"; to: 0.9; duration: 30 }
+                    NumberAnimation { target: bandB; property: "opacity"; to: 0; duration: 40 }
+                }
+            }
         }
 
         // hover — пауза таймера тоста (dunst mouse_hover)

@@ -45,4 +45,9 @@ Singleton {
 
     // --- Стекло (SPEC §9): false не создаёт текстуры стекла вообще ---
     readonly property bool glass: false
+
+    // --- Глич-шейдер появления панелей (Task 9, SPEC §8): kill-критерий как у стекла —
+    // если шейдер дороже ~2ms/кадр на этой машине — false отключает шейдер целиком
+    // (остаётся lite-вариант без GPU), текстуры при false не создаются
+    readonly property bool glitch: true
 }

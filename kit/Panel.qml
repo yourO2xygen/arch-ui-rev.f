@@ -8,6 +8,8 @@
 //   · замена: старая ячейка уходит 180ms (fade + scale .97), новая активируется
 //     на +120ms выше по z (Loader-стек, клип по слоту), БЕЗ ghost-эхо.
 //   · закрытие — зеркало открытия.
+//   · глич появления (Task 9): поверх fade+scale, ShaderEffect на layer волны,
+//     ТОЛЬКО во время перехода (_glitchRun); Theme.glitch=false → lite-flicker.
 // Loader.active после первого открытия панели никогда не гаснет (состояние живёт).
 //
 // Маска ввода: пустая, пока слот закрыт; прямоугольник панели — с первого кадра
@@ -68,6 +70,8 @@ PanelWindow {
     property bool _maskActive: false  // прямоугольная маска ввода
     property real _contentStage: 0    // 0..1 — стадия контента (хореография 430/220)
     property var _nextCell: null      // ячейка, ожидающая replaceTimer
+    property bool _glitchRun: false   // GlitchFX активен ТОЛЬКО во время перехода (SPEC §8)
+    property real _glitchProgress: 1  // 0→1 за Motion.glitchPanel; 1 = нейтрально/выкл
 
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -90,6 +94,16 @@ PanelWindow {
         opacity: 0
         scale: 0.97
         transformOrigin: Item.Center
+
+        // Глич появления (Task 9): слой+шейдер ТОЛЬКО пока идёт переход (_glitchRun);
+        // вне перехода обычный рендер, GPU-налога нет (SPEC §8). Theme.glitch=false —
+        // шейдер не создаётся вовсе (kill-критерий ~2ms/кадр), остаётся lite-flicker.
+        layer.enabled: panel._glitchRun && Theme.glitch
+        layer.effect: GlitchFX {
+            progress: panel._glitchProgress
+            widthPx: wave.width
+            heightPx: wave.height
+        }
 
         // Поверхность. ⚠ QTBUG-137166: у прозрачного Rect не трогать border → border.width: 0.
         Rectangle {
@@ -276,6 +290,43 @@ PanelWindow {
         AppleNumberAnimation { id: cellInScale; property: "scale"; to: 1; duration: Motion.panelOpen }
     }
 
+    // Глич открытия: progress 0→1 линейно за Motion.glitchPanel (350ms), по концу
+    // слой выключается — шейдер больше не активен (SPEC §8: живёт только в переходе)
+    NumberAnimation {
+        id: glitchRun
+        target: panel
+        property: "_glitchProgress"
+        to: 1
+        duration: Motion.glitchPanel
+        onStopped: panel._glitchRun = false
+    }
+
+    // Fallback без шейдера (Theme.glitch=false): lite-flicker волны ПОСЛЕ её хода
+    // (те же свойства, что у waveIn — встречные тики недопустимы), как у тостов/бара
+    SequentialAnimation {
+        id: glitchLiteRun
+        PauseAnimation { duration: Motion.panelOpen }
+        NumberAnimation { target: wave; property: "opacity"; to: 0.72; duration: Motion.glitchLite / 4 }
+        NumberAnimation { target: wave; property: "opacity"; to: 1; duration: Motion.glitchLite / 4 }
+        NumberAnimation { target: wave; property: "opacity"; to: 0.85; duration: Motion.glitchLite / 4 }
+        NumberAnimation { target: wave; property: "opacity"; to: 1; duration: Motion.glitchLite / 4 }
+    }
+
+    function _glitchStart() {
+        if (!Theme.glitch) { glitchLiteRun.restart(); return }
+        glitchRun.stop()
+        panel._glitchRun = true
+        panel._glitchProgress = 0
+        glitchRun.restart()
+    }
+
+    function _glitchStop() {
+        glitchRun.stop()
+        glitchLiteRun.stop()
+        panel._glitchRun = false
+        panel._glitchProgress = 1
+    }
+
     Timer {
         id: replaceTimer
         interval: Motion.replaceStagger
@@ -346,6 +397,7 @@ PanelWindow {
         openInner.property = "opacity"
         contentIn.restart()
         if (withGhost) ghostRun.restart()
+        _glitchStart()   // Task 9: глич поверх fade+scale (совместим с 430/220 контента)
     }
 
     function playClose() {
@@ -354,6 +406,7 @@ PanelWindow {
         waveIn.stop()
         contentIn.stop()
         ghostRun.stop()
+        _glitchStop()
         contentOut.restart()
         waveOut.restart()
     }
@@ -381,6 +434,7 @@ PanelWindow {
         ghostRun.stop()
         ghostA.opacity = 0
         ghostB.opacity = 0
+        _glitchStop()   // хром слота не мигает — replace без глича
 
         oc.z = 2                  // исходящая — НИЖЕ входящей (ревью: z-конфликт a→b→a)
 

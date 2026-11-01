@@ -144,6 +144,9 @@ Item {
         anchors.centerIn: parent
         spacing: root.gap
 
+        // x-jitter lite-глича (Translate, не x — anchors.centerIn держит позицию)
+        transform: Translate { id: jitter }
+
         // воркспейсы 1–6: 22×22 gap 4; on — инверсия+700, occ — raise/txt2, пустой — dim
         Row {
             spacing: 4
@@ -273,6 +276,55 @@ Item {
         }
     }
 
+    // ------------------------------------------- lite-глич открытия бара (Task 9)
+    // Без шейдера: flicker + x-jitter ±2px + 2 инверсные полосы, Motion.glitchLite.
+    Rectangle {
+        id: barBandA
+        anchors.left: parent.left
+        anchors.right: parent.right
+        y: parent.height * 0.25
+        height: 2
+        color: Theme.txt
+        opacity: 0
+        visible: opacity > 0
+    }
+    Rectangle {
+        id: barBandB
+        anchors.left: parent.left
+        anchors.right: parent.right
+        y: parent.height * 0.65
+        height: 2
+        color: Theme.txt
+        opacity: 0
+        visible: opacity > 0
+    }
+    SequentialAnimation {
+        id: barGlitch
+        ParallelAnimation {
+            SequentialAnimation {
+                NumberAnimation { target: content; property: "opacity"; to: 1; duration: 60 }
+                NumberAnimation { target: content; property: "opacity"; to: 0.72; duration: 25 }
+                NumberAnimation { target: content; property: "opacity"; to: 1; duration: 25 }
+            }
+            SequentialAnimation {
+                NumberAnimation { target: jitter; property: "x"; to: -2; duration: 60 }
+                NumberAnimation { target: jitter; property: "x"; to: 2; duration: 25 }
+                NumberAnimation { target: jitter; property: "x"; to: -1; duration: 25 }
+                NumberAnimation { target: jitter; property: "x"; to: 0; duration: 25 }
+            }
+            SequentialAnimation {
+                PauseAnimation { duration: 40 }
+                NumberAnimation { target: barBandA; property: "opacity"; to: 0.9; duration: 30 }
+                NumberAnimation { target: barBandA; property: "opacity"; to: 0; duration: 50 }
+            }
+            SequentialAnimation {
+                PauseAnimation { duration: 105 }
+                NumberAnimation { target: barBandB; property: "opacity"; to: 0.9; duration: 30 }
+                NumberAnimation { target: barBandB; property: "opacity"; to: 0; duration: 40 }
+            }
+        }
+    }
+
     // ------------------------------------------------- микро-flicker смены минуты
     // 60ms: один провал opacity до .75 (DESIGN-RESEARCH §3.9 — «щелчок табло»).
     SequentialAnimation {
@@ -307,6 +359,7 @@ Item {
         function onSlotsChanged() {
             if (LayoutState.slots.bar === "bar") {
                 ghostRun.restart()   // повторный toggleBar — рестарт таймера + эхо
+                barGlitch.restart()  // lite-глич появления (Task 9)
                 hideTimer.restart()
             } else {
                 hideTimer.stop()
