@@ -37,8 +37,9 @@ void main() {
     float l1 = dot(c1.rgb, vec3(0.299, 0.587, 0.114));
     float l2 = dot(c2.rgb, vec3(0.299, 0.587, 0.114));
     float edge = clamp(abs(c1.a - c2.a) * 2.0, 0.0, 1.0);
-    float l = max(lum, max(l1, l2) * (0.6 + 0.6 * edge));
     float a = max(c0.a, max(c1.a, c2.a));
+    // edge-boost жмём до alpha — иначе аддитивная кайма на премультиплированном
+    float l = max(lum, min(max(l1, l2) * (0.6 + 0.6 * edge), a));
 
     // (в) инверсия случайных полос — по luminance (монохром)
     float inv = step(0.97, hash(vec2(row, t + 7.0))) * env;

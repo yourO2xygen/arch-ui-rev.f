@@ -189,7 +189,7 @@ Singleton {
         for (let i = 0; i < lines.length; i++) {
             const m = lines[i].match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s(.*)$/)
             if (!m) continue
-            if (/^qs -c /.test(m[4])) qsPids[m[2]] = true
+            if (/(^|\s)qs(-d)? -c /.test(m[4])) qsPids[m[2]] = true
             recs.push({ uid: m[1], pid: m[2], ppid: m[3], args: m[4] })
         }
         const needUid = root.viaSudo ? "0" : root._uid
@@ -471,6 +471,7 @@ Singleton {
     // контейнер для статов панель задаёт отдельно (может не совпадать с logs)
     property string _statsContainer: ""
     property string _statsPending: ""                 // ждущий смерти предыдущего stats
+    property bool _statsStale: false                  // ответ сигналенного процесса — мимо модели
 
     function stats(container) {
         if (container === root._statsContainer && root._statsPending.length === 0
@@ -478,7 +479,8 @@ Singleton {
         root._statsContainer = container
         root._statsPending = container
         if (statsProc.running) {
-            statsProc.signal(15)                       // прошлый ответ — мимо модели
+            root._statsStale = true                   // прошлый ответ — запятнан (M9)
+            statsProc.signal(15)
             return
         }
         root._startStats()
@@ -503,13 +505,19 @@ Singleton {
     }
 
     function _parseStats(text) {
+        // ответ запятнанного (сигналенного SIGTERMом) процесса — чужие метрики
+        // в statsData не попадают; ждущий запрос перезапускаем (M9)
+        if (root._statsStale) {
+            root._statsStale = false
+            if (root._statsPending.length > 0 && root.dockerVisible) root._startStats()
+            return
+        }
         const line = text.split("\n").find(l => l.trim().length > 0)
         if (!line) {
             // гонка: сигнал 15 у предыдущего опроса — перезапустить отложенный
             if (root._statsPending.length > 0 && root.dockerVisible) root._startStats()
             return
         }
-        if (!line) return
         let s
         try { s = JSON.parse(line) } catch (e) { return }
         root.statsData = {

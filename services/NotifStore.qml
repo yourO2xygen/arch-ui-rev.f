@@ -71,6 +71,8 @@ Singleton {
     // можно только записи этого процесса (bootId > 0), не записи из JSONL.
     property int bootId: 0
     property int _uidSeq: 0
+    property bool _promoting: false     // реентрант-гейт _promotePending (M7)
+
     property var _spamLog: []            // времена приёма (мс) для спам-детектора
 
     // ------------------------------------------------------------- батчинг мутаций
@@ -294,7 +296,12 @@ Singleton {
         rec.notif = n
         rec.paused = false
         if (rec.locked) n.Retainable.lock()
-        n.closed.connect(reason => root._onClosed(rec, reason))
+        // гейт: при повторном _rebind того же объекта не вешаем второй closed-коннект
+        // (двойной _onClosed на закрытии) — по образцу _liveConnected
+        if (!rec._closedConnected) {
+            rec._closedConnected = true
+            n.closed.connect(reason => root._onClosed(rec, reason))
+        }
         _connectLive(rec, n)
 
         if (rec.state === "toast") {
@@ -474,6 +481,10 @@ Singleton {
     }
 
     function _promotePending() {
+        // ранний return при переполнении/реентрантности: каскад onClosed при dismiss
+        // мог протолкнуть сверх maxToasts (стек из 5)
+        if (root._promoting || root.toasts.length >= root.maxToasts) return
+        root._promoting = true
         let moved = false
         while (root.pendingCriticals.length > 0 && root.toasts.length < root.maxToasts) {
             const next = root.pendingCriticals.shift()
@@ -489,6 +500,7 @@ Singleton {
             root.toasts.push(next)
         }
         if (moved) _touchPending()
+        root._promoting = false
     }
 
     function _onClosed(rec, reason) {

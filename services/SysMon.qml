@@ -2,7 +2,7 @@ pragma Singleton
 // ARCH·UI v2 — services/SysMon.qml (SPEC §4/§8)
 //
 // Живые значения системы для SysInfo (слот B):
-//   cpu     — дельта /proc/stat между тиками (Timer 1.5s, idle+iowait), 0..1
+//   cpu     — дельта /proc/stat между тиками (Timer 2s, idle+iowait), 0..1
 //   mem     — /proc/meminfo MemTotal/MemAvailable, 0..1 (+ kB)
 //   gpu/vram— ОДИН долгоживущий /usr/bin/nvidia-smi --query-gpu=... -l 5
 //             (Process + SplitParser "\n"). Нет nvidia-smi → процесс не дёргается
@@ -300,7 +300,7 @@ Singleton {
     FileView {
         path: "/usr/bin/nvidia-smi"
         watchChanges: false
-        onLoaded: { root.gpuPresent = true; gpuProc.running = true }
+        onLoaded: { root.gpuPresent = true; gpuProc.exec(gpuProc.command) }
         onLoadFailed: {
             root._gpuDead = true
             root.gpuPresent = false

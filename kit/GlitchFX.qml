@@ -25,7 +25,6 @@ ShaderEffect {
 
     // 0 — старт глича, 1 — конец (нейтрально; хост к этому моменту выключает layer)
     property real progress: 1
-    readonly property bool live: progress < 1
 
     // размер в px — для смещения «±2px» в текстурных координатах
     property real widthPx: source ? source.width : 1

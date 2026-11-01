@@ -90,8 +90,7 @@ movecursor` сломан lua-диспетчером — hyprwm/Hyprland#14675), 
 
 Пре-existing, не ошибки шелла: предупреждение регистрации в host-portal
 (`App info not found for 'archui'`), `textinput`/`disableSurface` от Qt wayland
-при открытии/закрытии текстовых полей, WARN SysInfo.qml:101 «Cannot anchor…»
-(косметика спарклайна), WARN SysMon о не существующем nvidia-smi (на этой машине
+при открытии/закрытии текстовых полей, WARN SysMon о не существующем nvidia-smi (на этой машине
 его нет — SysMon специально показывает ghost «—» и не дёргает процесс повторно).
 
 ## Открытые вопросы (SPEC §13)

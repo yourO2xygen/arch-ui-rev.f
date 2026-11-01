@@ -97,12 +97,16 @@ Item {
 
         // спарклайн-cpu — ВНЕ потока Column (R1): верхняя правая четверть ячейки,
         // рядом со значением. Гистограмма последних 12 значений cpuHist (proto:
-        // 12 столбиков, h 14); новый столбик fade-in 200ms (Motion.sparkIn).
+        // 12 столбиков, h 14).
         Item {
             visible: cell.spark
             anchors.right: parent.right
             anchors.rightMargin: 12
-            anchors.verticalCenter: valRow.verticalCenter
+            // valRow не родитель и не сиблинг (он в Column) — anchors на него дают
+            // WARN «not a parent or sibling». Позиция детерминирована вёрсткой
+            // Column: margin 10 + label 10 + spacing 6 + (18−14)/2.
+            anchors.top: parent.top
+            anchors.topMargin: 28
             width: 70                          // 12 × (4 + 2) − 2
             height: root.sparkH
 
@@ -125,14 +129,9 @@ Item {
                     height: Math.max(1, Math.round(
                         (SysMon.cpuHist[SysMon.cpuHist.length - parent.filled + index] || 0)
                         * root.sparkH))
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: Motion.sparkIn
-                            easing.type: Easing.Bezier
-                            easing.bezierCurve: Motion.apple
-                        }
-                    }
-                    color: (SysMon.cpuHist[SysMon.cpuHist.length - parent.shown + index] || 0) >= 0.6
+                    // индексация цвета — та же формула, что у высоты (синхронизация
+                    // фикс M6: раньше в прогреве читался отрицательный индекс)
+                    color: (SysMon.cpuHist[SysMon.cpuHist.length - parent.filled + index] || 0) >= 0.6
                            ? Theme.txt : Theme.txt2
                 }
             }

@@ -39,7 +39,8 @@ Item {
     // Смена минуты — микро-flicker (сигнала onMinutesChanged у SystemClock нет —
     // notify общий dateChanged, поэтому локальное свойство со своим changed).
     property int minuteNow: clock.minutes
-    onMinuteNowChanged: minuteFlicker.restart()
+    // глич-появления сам фликерит content — встречный тик минуты не мешаем
+    onMinuteNowChanged: if (!barGlitch.running) minuteFlicker.restart()
 
     // -------------------------------------------------------------- воркспейсы
     // Занятость = воркспейс существует в Hyprland (пустые он удаляет сам, так что
@@ -123,9 +124,11 @@ Item {
                 const parts = event.parse(2)
                 const id = parts.length === 2 ? parseInt(parts[1]) : NaN
                 if (!isNaN(id)) root._eventWs = id
+                if (id === root._pendingWs) root._pendingWs = -1  // легаси-путь сработал
             } else if (event.name === "workspace") {
                 const id = parseInt(event.data)
                 if (!isNaN(id)) root._eventWs = id
+                if (id === root._pendingWs) root._pendingWs = -1  // легаси-путь сработал
             } else if (event.name === "activelayout") {
                 // данные: "имя-клавиатуры,имя-раскладки"
                 const parts = event.parse(2)
@@ -363,6 +366,7 @@ Item {
                 hideTimer.restart()
             } else {
                 hideTimer.stop()
+                barGlitch.stop()
             }
         }
     }

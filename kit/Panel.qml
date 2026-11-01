@@ -101,8 +101,6 @@ PanelWindow {
         layer.enabled: panel._glitchRun && Theme.glitch
         layer.effect: GlitchFX {
             progress: panel._glitchProgress
-            widthPx: wave.width
-            heightPx: wave.height
         }
 
         // Поверхность. ⚠ QTBUG-137166: у прозрачного Rect не трогать border → border.width: 0.

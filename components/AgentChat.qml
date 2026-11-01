@@ -42,6 +42,13 @@ Item {
         onContentHeightChanged: if (!root._userScrolled) flick.contentY = Math.max(0, flick.contentHeight - flick.height)
         onHeightChanged: if (!root._userScrolled) flick.contentY = Math.max(0, flick.contentHeight - flick.height)
 
+        // ручной скролл вверх (не в хвосте) — гасит автоскролл;
+        // возврат в atYEnd — включает обратно (I1)
+        onMovementStarted: if (!atYEnd) root._userScrolled = true
+        onContentYChanged: if (moving && !atYEnd) root._userScrolled = true
+        onMovementEnded: root._userScrolled = !atYEnd
+        onAtYEndChanged: if (atYEnd) root._userScrolled = false
+
         Column {
             id: feedCol
             anchors.top: parent.top

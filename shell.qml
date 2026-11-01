@@ -71,9 +71,11 @@ ShellRoot {
     }
 
     Component.onCompleted: console.info(
-        `[archui] shell loaded · screen ${Quickshell.screens[0].name} ` +
-        `${Quickshell.screens[0].width}x${Quickshell.screens[0].height} ` +
-        `@${Quickshell.screens[0].scale}`)
+        Quickshell.screens.length === 0
+        ? "[archui] shell loaded · no screens (headless)"
+        : `[archui] shell loaded · screen ${Quickshell.screens[0].name} ` +
+          `${Quickshell.screens[0].width}x${Quickshell.screens[0].height} ` +
+          `@${Quickshell.screens[0].scale}`)
 
     // --------------------------------------------------------------- СЛОТ A
     Kit.Panel {
