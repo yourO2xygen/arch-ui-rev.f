@@ -82,7 +82,7 @@ Item {
     opacity: root.dimmed ? 0.55 : 1
     Behavior on opacity {
         NumberAnimation {
-            duration: 300
+            duration: Motion.idleDimFade
             easing.type: Easing.Bezier
             easing.bezierCurve: Motion.apple
         }
@@ -103,27 +103,29 @@ Item {
         onContainsMouseChanged: if (containsMouse) root.poke()
     }
 
-    // ---------------------------------------------------------------------- head
+    // ------------------------------------------------- скрываемый контент календаря
+    // Один контейнер с общим фейдом (Motion.navFade): в свернутом виде остаётся
+    // только чип (он — сиблинг ниже). По-элементные opacity убраны — фейд симметричен.
     Item {
-        id: head
-        x: root.padH
-        y: 10
-        width: parent.width - root.padH * 2
-        height: root.headH
-
-        // ‹ месяц › — прячется в свернутом виде (остаётся только чип)
-        Item {
-            id: nav
-            anchors.fill: parent
-            opacity: root.collapsed ? 0 : 1
-            visible: opacity > 0.01
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: 160
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: Motion.apple
-                }
+        id: expanded
+        anchors.fill: parent
+        opacity: root.collapsed ? 0 : 1
+        visible: opacity > 0.01
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.navFade
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Motion.apple
             }
+        }
+
+        // ------------------------------------------------------------------ head
+        Item {
+            id: head
+            x: root.padH
+            y: 10
+            width: parent.width - root.padH * 2
+            height: root.headH
 
             Rectangle {
                 id: prevBtn
@@ -138,6 +140,7 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: { root.shiftMonth(-1); root.poke() }
+                    onPositionChanged: root.poke()
                     onContainsMouseChanged: if (containsMouse) root.poke()
                 }
             }
@@ -169,143 +172,143 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: { root.shiftMonth(1); root.poke() }
+                    onPositionChanged: root.poke()
                     onContainsMouseChanged: if (containsMouse) root.poke()
                 }
             }
         }
 
-        // дата-чип: клик — сворачивание до 264×40 и обратно
-        Rectangle {
-            id: chip
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: chipText.implicitWidth + 16   // .chip{padding:4px 8px} → 8 с боков
+        // ------------------------------------------------------------------- dow
+        Grid {
+            id: dowRow
+            x: root.padH
+            y: 40
+            columns: 7
+            spacing: 2
+
+            Repeater {
+                model: ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+
+                delegate: Item {
+                    required property string modelData
+                    width: 32
+                    height: root.dowH
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: parent.modelData
+                        color: Theme.dim
+                        font.family: Theme.font
+                        font.pixelSize: 9
+                        font.weight: Font.Medium
+                        font.letterSpacing: 0.85   // ls .1em от 8.5px
+                    }
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------ grid
+        Grid {
+            id: grid
+            x: root.padH
+            y: 56
+            columns: 7
+            spacing: 2
+
+            Repeater {
+                model: root.cells
+
+                delegate: Rectangle {
+                    id: cell
+                    required property var modelData
+                    readonly property bool isToday: modelData.t === root.today.getTime()
+
+                    width: 32
+                    height: root.cellH
+                    color: isToday ? Theme.invBg
+                         : hoverMa.containsMouse && !modelData.out ? Theme.raise : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: parent.modelData.day
+                        color: parent.isToday ? Theme.invFg
+                             : parent.modelData.out ? Theme.ghost : Theme.txt2
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.weight: parent.isToday ? Font.Bold : Font.Medium
+                    }
+
+                    MouseArea {
+                        id: hoverMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton
+                        onPositionChanged: root.poke()   // движение внутри ячейки тоже будит
+                        onContainsMouseChanged: if (containsMouse) root.poke()
+                    }
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------ foot
+        Item {
+            x: root.padH
+            y: 258
+            width: parent.width - root.padH * 2
             height: 22
-            color: chipMa.containsMouse || chipMa.pressed ? Theme.raise2 : Theme.raise
 
             Text {
-                id: chipText
-                anchors.centerIn: parent
-                text: root.collapsed
-                      ? DateFmt.chipFull(root.todayY, root.todayM, root.todayD)
-                      : DateFmt.dayMonth(root.todayM, root.todayD)
-                color: Theme.txt2
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: "week " + root.weekNo
+                color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 10
-                font.weight: Font.Medium
+                font.pixelSize: 9
             }
 
-            MouseArea {
-                id: chipMa
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: { root.collapsed = !root.collapsed; root.poke() }
-                onContainsMouseChanged: if (containsMouse) root.poke()
-            }
-        }
-    }
-
-    // ----------------------------------------------------------------------- dow
-    Grid {
-        id: dowRow
-        x: root.padH
-        y: 40
-        columns: 7
-        spacing: 2
-        opacity: root.collapsed ? 0 : 1
-        visible: opacity > 0.01
-
-        Repeater {
-            model: ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-
-            delegate: Item {
-                required property string modelData
-                width: 32
-                height: root.dowH
-
-                Text {
-                    anchors.centerIn: parent
-                    text: parent.modelData
-                    color: Theme.dim
-                    font.family: Theme.font
-                    font.pixelSize: 9
-                    font.weight: Font.Medium
-                    font.letterSpacing: 0.85   // ls .1em от 8.5px
-                }
+            Text {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: DateFmt.monthYear(root.viewYear, root.viewMonth)
+                color: Theme.dim
+                font.family: Theme.font
+                font.pixelSize: 9
             }
         }
     }
 
-    // ---------------------------------------------------------------------- grid
-    Grid {
-        id: grid
-        x: root.padH
-        y: 56
-        columns: 7
-        spacing: 2
-        opacity: root.collapsed ? 0 : 1
-        visible: opacity > 0.01
-
-        Repeater {
-            model: root.cells
-
-            delegate: Rectangle {
-                id: cell
-                required property var modelData
-                readonly property bool isToday: modelData.t === root.today.getTime()
-
-                width: 32
-                height: root.cellH
-                color: isToday ? Theme.invBg
-                     : hoverMa.containsMouse && !modelData.out ? Theme.raise : "transparent"
-
-                Text {
-                    anchors.centerIn: parent
-                    text: parent.modelData.day
-                    color: parent.isToday ? Theme.invFg
-                         : parent.modelData.out ? Theme.ghost : Theme.txt2
-                    font.family: Theme.font
-                    font.pixelSize: 11
-                    font.weight: parent.isToday ? Font.Bold : Font.Medium
-                }
-
-                MouseArea {
-                    id: hoverMa
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.NoButton
-                    onContainsMouseChanged: if (containsMouse) root.poke()
-                }
-            }
-        }
-    }
-
-    // ---------------------------------------------------------------------- foot
-    Item {
-        x: root.padH
-        y: 258
-        width: parent.width - root.padH * 2
+    // --------------------------------------------------------------- дата-чип
+    // Вне expanded: единственное, что остаётся при свёртывании (264×40).
+    // y = 10 (head) + (30 − 22)/2 — тот же вертикальный центр, что у head.
+    Rectangle {
+        id: chip
+        anchors.right: parent.right
+        anchors.rightMargin: root.padH
+        y: 14
+        width: chipText.implicitWidth + 16   // .chip{padding:4px 8px} → 8 с боков
         height: 22
-        opacity: root.collapsed ? 0 : 1
-        visible: opacity > 0.01
+        color: chipMa.containsMouse || chipMa.pressed ? Theme.raise2 : Theme.raise
 
         Text {
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            text: "week " + root.weekNo
-            color: Theme.dim
+            id: chipText
+            anchors.centerIn: parent
+            text: root.collapsed
+                  ? DateFmt.chipFull(root.todayY, root.todayM, root.todayD)
+                  : DateFmt.dayMonth(root.todayM, root.todayD)
+            color: Theme.txt2
             font.family: Theme.font
-            font.pixelSize: 9
+            font.pixelSize: 10
+            font.weight: Font.Medium
         }
 
-        Text {
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: DateFmt.monthYear(root.viewYear, root.viewMonth)
-            color: Theme.dim
-            font.family: Theme.font
-            font.pixelSize: 9
+        MouseArea {
+            id: chipMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: { root.collapsed = !root.collapsed; root.poke() }
+            onPositionChanged: root.poke()
+            onContainsMouseChanged: if (containsMouse) root.poke()
         }
     }
 

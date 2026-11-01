@@ -186,7 +186,7 @@ ShellRoot {
         implicitHeight: calendarContent.collapsed ? 40 : 288
         Behavior on implicitHeight {
             NumberAnimation {
-                duration: 260
+                duration: Motion.calendarCollapse
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Motion.apple
             }
@@ -218,7 +218,11 @@ ShellRoot {
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         visible: LayoutState.slots.bar !== null
-        mask: Region { width: bar.width; height: bar.height }
+        // SPEC §2: скрытый бар — пустая маска (не Region на весь скрытый слой)
+        mask: Region {
+            width: bar.visible ? bar.width : 0
+            height: bar.visible ? bar.height : 0
+        }
 
         Rectangle {
             anchors.fill: parent

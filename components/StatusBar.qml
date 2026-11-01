@@ -93,6 +93,19 @@ Item {
             const from = root.currentWsId()
             Hyprland.dispatch(
                 `hl.dsp.workspace.change_id({workspace=${from}, id=${root._pendingWs}})`)
+            wsWarn.restart()
+        }
+    }
+
+    // Оба пути не сработали (например, lua-бридж собрки изменился) — предупредить раз.
+    Timer {
+        id: wsWarn
+        interval: 300
+        onTriggered: {
+            if (root._pendingWs < 0 || root.currentWsId() === root._pendingWs) return
+            console.warn(
+                `[archui] statusBar: dispatch workspace ${root._pendingWs} не сработал ` +
+                `(legacy + lua-фолбэк)`)
             root._pendingWs = -1
         }
     }
@@ -172,8 +185,8 @@ Item {
             }
         }
 
-        // #bar .sep — 1×16 rgba(255,255,255,.09)
-        Rectangle { width: 1; height: 16; color: Qt.rgba(1, 1, 1, 0.09) }
+        // #bar .sep — 1×16 rgba(255,255,255,.09) = Theme.raise2
+        Rectangle { width: 1; height: 16; color: Theme.raise2 }
 
         // раскладка: 500 11px, txt (#bar .bl)
         Text {
@@ -185,7 +198,7 @@ Item {
             font.weight: Font.Medium
         }
 
-        Rectangle { width: 1; height: 16; color: Qt.rgba(1, 1, 1, 0.09) }
+        Rectangle { width: 1; height: 16; color: Theme.raise2 }
 
         // часы + дата: baseline-выравнивание, gap 8 (#clock)
         Item {
@@ -225,7 +238,7 @@ Item {
         id: ghostA
         anchors.fill: parent
         color: "transparent"
-        border.color: Qt.rgba(1, 1, 1, 0.5)
+        border.color: Theme.ghostLine
         border.width: 1
         opacity: 0
         transformOrigin: Item.Center
@@ -235,7 +248,7 @@ Item {
         id: ghostB
         anchors.fill: parent
         color: "transparent"
-        border.color: Qt.rgba(1, 1, 1, 0.5)
+        border.color: Theme.ghostLine
         border.width: 1
         opacity: 0
         transformOrigin: Item.Center
@@ -264,8 +277,8 @@ Item {
     // 60ms: один провал opacity до .75 (DESIGN-RESEARCH §3.9 — «щелчок табло»).
     SequentialAnimation {
         id: minuteFlicker
-        NumberAnimation { target: content; property: "opacity"; to: 0.75; duration: 30 }
-        NumberAnimation { target: content; property: "opacity"; to: 1; duration: 30 }
+        NumberAnimation { target: content; property: "opacity"; to: 0.75; duration: Motion.clockFlicker }
+        NumberAnimation { target: content; property: "opacity"; to: 1; duration: Motion.clockFlicker }
     }
 
     // -------------------------------------------------- автоскрытие / hover-hold
@@ -276,18 +289,16 @@ Item {
     }
 
     // hover над баром держит: вход — стоп, выход — полные 2800 заново (ANALYSIS §7.14).
-    // acceptedButtons: NoButton — клики баром не перехватываются.
-    MouseArea {
+    // HoverHandler, а не MouseArea: неэксклюзивен по hover — ячейки воркспейсов под ним
+    // (MouseArea, z ниже) продолжают получать containsMouse/cursor.
+    HoverHandler {
         id: hoverHold
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.NoButton
-        onContainsMouseChanged: root._syncHover()
+        onHoveredChanged: root._syncHover()
     }
 
     function _syncHover() {
         if (LayoutState.slots.bar === null) return
-        if (hoverHold.containsMouse) hideTimer.stop()
+        if (hoverHold.hovered) hideTimer.stop()
         else hideTimer.restart()
     }
 

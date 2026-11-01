@@ -18,6 +18,7 @@ Singleton {
     readonly property color raise2: Qt.rgba(1, 1, 1, 0.09) // rgba(255,255,255,.09)
     readonly property color invBg: "#f4f4f5"
     readonly property color invFg: "#000000"
+    readonly property color ghostLine: Qt.rgba(1, 1, 1, 0.5) // ghost-контуры анимаций (ANALYSIS §3.2)
 
     // Effective stroke иконок: stroke_vb = strokeE * 24 / size, пол 1.25 (см. kit/Icon.qml)
     readonly property real strokeE: 1.5

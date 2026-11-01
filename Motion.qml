@@ -51,4 +51,12 @@ Singleton {
     readonly property int barTimeout: 2800
     readonly property int caretBlink: 1070
     readonly property int caretPause: 900
+
+    // Бар/календарь (T3): полумиг табло часов (провал и возврат — по половине),
+    // свёртывание окна календаря, фейд nav-строки и прочего скрываемого контента,
+    // idle-dim календаря до 0.55
+    readonly property int clockFlicker: 30
+    readonly property int calendarCollapse: 260
+    readonly property int navFade: 160
+    readonly property int idleDimFade: 300
 }

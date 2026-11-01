@@ -91,13 +91,13 @@ PanelWindow {
             border.width: 0
         }
 
-        // Ghost-эхо: 2 контурных Rect 1px rgba(255,255,255,.5) (ANALYSIS §3.2).
+        // Ghost-эхо: 2 контурных Rect 1px Theme.ghostLine (ANALYSIS §3.2).
         // Только на открытие из пустого слота; на replace отключено (SPEC §2).
         Rectangle {
             id: ghostA
             anchors.fill: parent
             color: "transparent"
-            border.color: Qt.rgba(1, 1, 1, 0.5)
+            border.color: Theme.ghostLine
             border.width: 1
             opacity: 0
             transformOrigin: Item.Center
@@ -107,7 +107,7 @@ PanelWindow {
             id: ghostB
             anchors.fill: parent
             color: "transparent"
-            border.color: Qt.rgba(1, 1, 1, 0.5)
+            border.color: Theme.ghostLine
             border.width: 1
             opacity: 0
             transformOrigin: Item.Center
