@@ -4,6 +4,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 
 Singleton {
     id: root
@@ -34,6 +35,21 @@ Singleton {
         source: Qt.resolvedUrl("assets/fonts/DSEG7Classic-Bold.ttf")
     }
 
+    // --- px-множитель (Task 17): расчёт от фактического экрана ---
+    // Базовый дизайн отрисован под 1600×900 при monitor scale 1.2. Layershell-окна
+    // Hyprland НЕ автомасштабирует (surface px = логические px экрана), поэтому
+    // соответствие «шрифты панели крупнее так же, как терминал» даём множителем:
+    //   px = screenScale / designScale   (scale 1.25 → px ≈ 1.042)
+    // px умножает ДИЗАЙНОВЫЕ шрифты/высоты (fs*/h*/wLabel); позиции окон при этом
+    // считаются от фактического логического экрана в shell.qml (не через px).
+    // Источник scale — монитор Hyprland того же экрана, к которому аттачатся окна
+    // (Quickshell.screens[0].scale в этой сборке не заполнен — undefined),
+    // фолбэк — designScale (px=1, базовая сетка).
+    readonly property real designScale: 1.2
+    readonly property real px: Hyprland.monitors.length > 0 && Hyprland.monitors[0].scale > 0
+                              ? Hyprland.monitors[0].scale / designScale : 1
+    function f(base: real): int { return Math.round(base * root.px) }
+
     // --- Отступы: фактические значения макета (SPEC §3: 6/8/10/11/12/13/18) ---
     readonly property int s6: 6
     readonly property int s8: 8
@@ -43,29 +59,29 @@ Singleton {
     readonly property int s13: 13
     readonly property int s18: 18
 
-    // --- Шрифты: pixelSize для font.* (1:1 из существующих литералов) ---
-    readonly property int fs8: 8
-    readonly property int fs9: 9
-    readonly property int fs10: 10
-    readonly property int fs11: 11
-    readonly property int fs12: 12
-    readonly property int fs13: 13
-    readonly property int fs15: 15
-    readonly property int fs18: 18
+    // --- Шрифты: pixelSize для font.* (базовые значения × px) ---
+    readonly property int fs8: f(8)
+    readonly property int fs9: f(9)
+    readonly property int fs10: f(10)
+    readonly property int fs11: f(11)
+    readonly property int fs12: f(12)
+    readonly property int fs13: f(13)
+    readonly property int fs15: f(15)
+    readonly property int fs18: f(18)
 
-    // --- Структурные высоты: head/foot панелей, ряды, чипы ---
-    readonly property int hHead: 40   // head-кит слота (kit/Panel)
-    readonly property int hFoot: 30   // foot-кит слота (kit/Panel)
-    readonly property int hRow: 30    // панельные ряды (TaskMgr/AgentMgr/AgentChat/Docker info)
-    readonly property int hRowL: 34   // крупные ряды (Launcher)
-    readonly property int hRowS: 28   // компактные ряды (kit/Row, строки SysInfo hw)
-    readonly property int hChip: 22   // чипы/мини-плитки
+    // --- Структурные высоты: head/foot панелей, ряды, чипы (базовые × px) ---
+    readonly property int hHead: f(40)   // head-кит слота (kit/Panel)
+    readonly property int hFoot: f(30)   // foot-кит слота (kit/Panel)
+    readonly property int hRow: f(30)    // панельные ряды (TaskMgr/AgentMgr/AgentChat/Docker info)
+    readonly property int hRowL: f(34)   // крупные ряды (Launcher)
+    readonly property int hRowS: f(28)   // компактные ряды (kit/Row, строки SysInfo hw)
+    readonly property int hChip: f(22)   // чипы/мини-плитки
 
     // --- Отступы (дополнение к 6/8/10…): паддинги панелей/чипов ---
     readonly property int s16: 16
 
-    // --- Ключевые ширины ---
-    readonly property int wLabel: 84  // метка-колонка label caps (Docker/SysInfo)
+    // --- Ключевые ширины (базовая × px: шрифт метки растёт вместе с колонкой) ---
+    readonly property int wLabel: f(84)  // метка-колонка label caps (Docker/SysInfo)
 
     // --- Радиусы ---
     readonly property int r2: 2

@@ -54,9 +54,11 @@ PanelWindow {
     readonly property string panelId: LayoutState.slots[panel.slot] ?? ""
     readonly property bool open: panelId !== ""
 
-    // Анатомия (ANALYSIS §5): head 40 / body pad 12 16 16 / foot 30
-    readonly property int headH: 40
-    readonly property int footH: 30
+    // Анатомия (ANALYSIS §5): head 40 / body pad 12 16 16 / foot 30 —
+    // базовые высоты через Theme.hHead/hFoot (× px, Task 17): шрифт head растёт
+    // вместе с хромом слота, контент body сжимается согласованно.
+    readonly property int headH: Theme.hHead
+    readonly property int footH: Theme.hFoot
     readonly property int padTop: 12
     readonly property int padLeft: 16
     readonly property int padRight: 16

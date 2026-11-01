@@ -1,10 +1,12 @@
 // ARCH·UI v2 — components/SysInfo.qml (SPEC §4, DESIGN §4 «sysinfo», ANALYSIS 5.3)
-// Слот B (panelId "sysinfo"): метрики 2×2 (ячейка 228×92: значение 15 + юнит 9,
+// Слот A (panelId "sysinfo"): метрики 2×2 (ячейка 228×92: значение 15 + юнит 9,
 // подпись 9, сегментированная полоса; у cpu — спарклайн-гистограмма, fade-in столбца
-// 200ms) + секция HARDWARE 2×3 (строки h28, метка-колонка 84, иконка 12): battery /
+// 200ms) + секция HARDWARE одноколоночная (Task 17, ради места при Theme.px>1;
+// строки h28 во всю ширину body, метка-колонка wLabel, иконка 12): battery /
 // network / vpn / bluetooth / usb + шестая строка по наличию железа (gpu °C, иначе
-// loadavg). GPU по вендору: nvidia / amdgpu дают метрики; intel — name-only
-// (gpuName вместо ghost, % / vram — dim «iGPU», «shared»); headless — ghost.
+// loadavg). Значения краткие (Task 17): CPU-подпись — cpuModelShort («i5 1155G7»),
+// memory — «used/total G». GPU по вендору: nvidia / amdgpu дают метрики; intel —
+// name-only (gpuName вместо ghost, % / vram — dim «iGPU», «shared»); headless — ghost.
 // Все данные — биндинги на SysMon; панель сама ничего не читает (SPEC §8: чтения — в синглтоне).
 // Head (i-gauge + SYSINFO + чип uptime) и foot (user@host · ядро) живут в shell.qml.
 
@@ -20,6 +22,7 @@ Item {
     readonly property bool gpuOk: SysMon.gpuPresent
     readonly property bool nameOnly: SysMon.gpuInfo === "name-only"   // intel iGPU
     readonly property int sparkH: 14          // proto: спарклайн 14px (ANALYSIS 5.3)
+    readonly property int bodyW: parent !== null ? parent.width : 472  // ширина body (Loader)
 
     // ---------------------------------------------------------------- метрики
     // Ячейка 228×92: raise, pad 10/12, gap 6 (ANALYSIS 5.3 .metric)
@@ -152,7 +155,7 @@ Item {
         property int metaW: 88
         property bool ghost: false            // нет железа/выключено — dim
 
-        width: 228
+        width: parent.width                    // Task 17: одноколоночный HARDWARE — во всю ширину
         height: Theme.hRowS
 
         Kit.Icon {
@@ -213,15 +216,17 @@ Item {
                 label: "CPU"
                 value: (SysMon.cpu * 100).toFixed(1)
                 unit: "%"
-                caption: SysMon.cpuModel.length > 0 ? SysMon.cpuModel : "cpu"
+                caption: SysMon.cpuModelShort.length > 0 ? SysMon.cpuModelShort
+                        : SysMon.cpuModel.length > 0 ? SysMon.cpuModel : "cpu"
                 barValue: SysMon.cpu
                 spark: true
             }
             Metric {
                 label: "MEMORY"
                 value: (SysMon.memUsedKb / 1048576).toFixed(1)
-                unit: "G used"
-                caption: SysMon.fmtKb(SysMon.memAvailKb) + " available · " + SysMon.fmtKb(SysMon.memTotalKb) + " total"
+                       + "/" + (SysMon.memTotalKb / 1048576).toFixed(1)
+                unit: "G"
+                caption: SysMon.fmtKb(SysMon.memAvailKb) + " available"
                 barValue: SysMon.mem
             }
             // name-only (intel iGPU): вместо ghost-пустоты — символьные значения
@@ -253,9 +258,12 @@ Item {
             width: parent.width
             label: "Hardware"
 
+            // HARDWARE — одна колонка во всю ширину body (Task 17): при px>1 шрифт
+            // крупнее, двухколоночная сетка 228px не помещала значения.
             Grid {
-                columns: 2
-                columnSpacing: 16
+                id: hwGrid
+                columns: 1
+                width: root.bodyW
                 rowSpacing: 4
 
                 HwRow {                       // battery (нет батареи — не место пустует)
@@ -296,7 +304,7 @@ Item {
                     meta: "bus"
                     ghost: SysMon.usbCount === 0
                 }
-                // шестая ячейка 2×3 — по наличию железа: gpu °C, иначе loadavg
+                // шестая строка — по наличию железа: gpu °C, иначе loadavg
                 HwRow {
                     icon: root.gpuOk ? "gpu" : "activity"
                     label: root.gpuOk ? "gpu temp" : "load"

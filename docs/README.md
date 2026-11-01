@@ -18,8 +18,9 @@
    `systemctl --user mask dunst.service` (шелл сам — notification daemon).
 4. **Зависимости**: quickshell 0.3.2, qt6-shadertools (qsb), hyprland 0.57;
    опционально `sudo usermod -aG docker gitgut` (панель docker без ghost «no permission»).
-5. **Экран**: сетка рассчитана от логической 1600×900 (scale 1.2). На других
-   разрешениях маски/позиции могут не совпадать — сверяйся с docs/layout.md.
+5. **Экран**: сетка рассчитывается от фактического логического разрешения
+   (базовый дизайн — 1600×900, scale 1.2; шрифты/размеры — Theme.px от scale
+   монитора). Сверяйся с docs/layout.md.
 
 ## Запуск
 

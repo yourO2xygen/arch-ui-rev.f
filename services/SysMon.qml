@@ -79,13 +79,22 @@ Singleton {
     property string hostName: ""
     property string kernel: ""
     property string cpuModel: ""       // подпись метрики cpu (ANALYSIS 5.3: «ryzen 7 …»)
+    property string cpuModelShort: ""  // краткая подпись (Task 17: «i5 1155G7», «Ryzen 7 5800X»)
 
     FileView {
         path: "/proc/cpuinfo"
         watchChanges: false
         onLoaded: {
             const m = text().match(/^model name\s*:\s*(.+)$/m)
-            if (m) root.cpuModel = m[1].replace(/\(R\)|\(TM\)|CPU\s|@.*$/g, "").replace(/\s+/g, " ").trim()
+            if (!m) return
+            root.cpuModel = m[1].replace(/\(R\)|\(TM\)|CPU\s|@.*$/g, "").replace(/\s+/g, " ").trim()
+            // Краткая форма: ищем бренд-токен (i3/i5/i7/i9, Ryzen N) + следующее за
+            // ним числовое обозначение. «11th Gen Intel(R) Core(TM) i5-1155G7 …» →
+            // «i5 1155G7». Не распарсилось — оставляем полную строку.
+            const s = m[1].match(/(i[3579]|Ryzen\s*\d+)[-\s]?([0-9]{3,5}[A-Z0-9]{0,3})/i)
+            root.cpuModelShort = s !== null
+                ? s[1].replace(/\s+/g, " ").trim() + " " + s[2].toUpperCase()
+                : root.cpuModel
         }
     }
 

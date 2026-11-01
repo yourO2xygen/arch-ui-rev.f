@@ -3,7 +3,8 @@
 // Окна: 3 колонки-слота (A/B/C) + calendar + bar + toasts — все создаются один раз и
 // живут всегда (демон), exclusionMode: Ignore, namespace "archui:*", маска ввода пустая
 // на закрытых слотах. IPC-таргет "archui", GlobalShortcut лаунчера (обработчик запуска —
-// задача 7). Сетка — логические px, scale 1.2 (экран 1600×900).
+// задача 7). Сетка — расчёт от фактического логического экрана (базовый дизайн
+// 1600×900@1.2); шрифты/высоты масштабируются Theme.px (Task 17).
 
 import QtQuick
 import Quickshell
@@ -14,6 +15,23 @@ import "kit" as Kit
 
 ShellRoot {
     id: root
+
+    // --- Геометрия от фактического логического экрана (Task 17) ---
+    // Источник — Quickshell.screens[0] (тот же экран, к которому аттачатся все
+    // PanelWindow демона; стартовый лог ниже печатает именно его). Окна НЕ
+    // автомасштабируются с монитором — px-множитель шрифтов/высот живёт в Theme,
+    // позиции/отступы считаются здесь от реального width/height:
+    //   pad    = round(W·24/1600)                — базовый отступ макета 24
+    //   слот A: x = pad;   B: (W−slotW)/2;   C:  W − pad − slotW
+    //   y слотов = H − slotH − pad;  slotW/H = round(504/544 · Theme.px)
+    // На базовом 1600×900@1.2 (px=1) это ровно старые числа: 24 / 548 / 1072, y=332.
+    readonly property var scr: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+    readonly property int scrW: scr !== null ? scr.width : 1600
+    readonly property int scrH: scr !== null ? scr.height : 900
+    readonly property int pad: Math.round(scrW * 24 / 1600)
+    readonly property int slotW: Math.round(504 * Theme.px)
+    readonly property int slotH: Math.round(544 * Theme.px)
+    readonly property int slotY: scrH - slotH - pad
 
     // Тумблер DND (ANALYSIS §5.5 .sw: 32×18, бегунок 14×14, 160ms — Motion.dndToggle)
     component DndToggle: Rectangle {
@@ -84,10 +102,10 @@ ShellRoot {
         panels: ["docker", "taskmgr", "sysinfo"]
         WlrLayershell.namespace: "archui:col-a"
         anchors { left: true; top: true }
-        margins.left: 24
-        margins.top: 332
-        implicitWidth: 504
-        implicitHeight: 544
+        margins.left: root.pad
+        margins.top: root.slotY
+        implicitWidth: root.slotW
+        implicitHeight: root.slotH
 
         head: Component {
             Item {
@@ -275,10 +293,10 @@ ShellRoot {
                                      : WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "archui:col-b"
         anchors { left: true; top: true }
-        margins.left: 548
-        margins.top: 332
-        implicitWidth: 504
-        implicitHeight: 544
+        margins.left: Math.round((root.scrW - root.slotW) / 2)
+        margins.top: root.slotY
+        implicitWidth: root.slotW
+        implicitHeight: root.slotH
 
         head: Component {
             Item {
@@ -435,10 +453,10 @@ ShellRoot {
         panels: ["chat", "aimgr", "notifcenter"]
         WlrLayershell.namespace: "archui:col-c"
         anchors { left: true; top: true }
-        margins.left: 1072
-        margins.top: 332
-        implicitWidth: 504
-        implicitHeight: 544
+        margins.left: root.scrW - root.pad - root.slotW
+        margins.top: root.slotY
+        implicitWidth: root.slotW
+        implicitHeight: root.slotH
 
         head: Component {
             Item {
@@ -672,10 +690,11 @@ ShellRoot {
         WlrLayershell.namespace: "archui:calendar"
         visible: false
         anchors { left: true; top: true }
-        margins.left: 24
-        margins.top: 24
-        implicitWidth: 264
-        implicitHeight: calendarContent.collapsed ? 40 : 288
+        margins.left: root.pad
+        margins.top: root.pad
+        implicitWidth: Math.round(264 * Theme.px)
+        implicitHeight: calendarContent.collapsed ? Math.round(40 * Theme.px)
+                                                  : Math.round(288 * Theme.px)
         Behavior on implicitHeight {
             NumberAnimation {
                 duration: Motion.calendarCollapse
@@ -704,9 +723,9 @@ ShellRoot {
         WlrLayershell.namespace: "archui:bar"
         anchors { left: true; top: true }
         margins.top: 0
-        margins.left: Math.round(((bar.screen ? bar.screen.width : 1600) - bar.implicitWidth) / 2)
-        implicitWidth: 500
-        implicitHeight: 44
+        margins.left: Math.round((root.scrW - bar.implicitWidth) / 2)
+        implicitWidth: Math.round(500 * Theme.px)
+        implicitHeight: Math.round(44 * Theme.px)
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         visible: LayoutState.slots.bar !== null
@@ -733,9 +752,9 @@ ShellRoot {
         id: toasts
         WlrLayershell.namespace: "archui:toasts"
         anchors { right: true; top: true }
-        margins.right: 24
-        margins.top: 24
-        implicitWidth: 276
+        margins.right: root.pad
+        margins.top: root.pad
+        implicitWidth: Math.round(276 * Theme.px)
         implicitHeight: Math.max(1, toastContent.contentHeight)
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
