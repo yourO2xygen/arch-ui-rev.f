@@ -20,6 +20,17 @@ Singleton {
     readonly property int contentDelay: 430
     readonly property int contentFade: 220
 
+    // Ghost-эхо панели (SPEC §3): +40/+140, scale .99→.952, opacity .45→0;
+    // на replace отключено. ghostOpacityTo всегда 0 — отдельно не токенизируется.
+    readonly property int ghostDelay1: 40
+    readonly property int ghostDelay2: 140
+    readonly property real ghostScaleFrom: 0.99
+    readonly property real ghostScaleTo: 0.952
+    readonly property real ghostOpacityFrom: 0.45
+
+    // Пульс точки статуса: 2s InOutSine, только у filled-варианта
+    readonly property int dotPulse: 2000
+
     // Замена панели: старая уходит 180 (fade + scale .97, без ghost-эхо)
     readonly property int replaceExit: 180
 
