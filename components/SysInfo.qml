@@ -111,18 +111,20 @@ Item {
             readonly property int gap: 2
             readonly property int filled: Math.min(shown, SysMon.cpuHist.length)
 
+            // Прогрев (фикс ревью T5): пока в hist меньше 12 точек, показываем
+            // ровно filled реальных столбиков (не читаем отрицательные индексы);
+            // столбики прижаты вправо, чтобы контейнер «подрастал» влево.
             Repeater {
-                model: parent.shown
+                model: parent.filled
 
                 Rectangle {
                     required property int index
-                    x: index * (parent.barW + parent.gap)
+                    x: (parent.shown - parent.filled + index) * (parent.barW + parent.gap)
                     anchors.bottom: parent.bottom
                     width: parent.barW
                     height: Math.max(1, Math.round(
-                        (SysMon.cpuHist[SysMon.cpuHist.length - parent.shown + index] || 0)
+                        (SysMon.cpuHist[SysMon.cpuHist.length - parent.filled + index] || 0)
                         * root.sparkH))
-                    opacity: index < parent.filled ? 1 : 0
                     Behavior on opacity {
                         NumberAnimation {
                             duration: Motion.sparkIn

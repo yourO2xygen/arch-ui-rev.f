@@ -21,6 +21,9 @@ Item {
 
     implicitWidth: 228
     implicitHeight: 4
+    // plain Item в Column имеет height 0 — геометрия Column'ы ненадёжна без явного
+    // биндинга (урок ревью T5; штрихи были видны только потому, что нет clip)
+    height: implicitHeight
 
     readonly property int tickCount:
         Math.max(1, Math.floor((width + tickGap) / (tickW + tickGap)))
