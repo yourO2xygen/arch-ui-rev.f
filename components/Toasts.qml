@@ -172,7 +172,8 @@ Item {
                     Text {
                         width: parent.width
                         visible: card.rec !== null && card.rec.body.length > 0
-                        // body-markup: StyledText (b/i/u); текст задан нами — xss нет
+                        // body-markup: StyledText (b/i/u); body клиентский — <a> не
+                        // кликабелен (нет обработчика onLinkActivated), xss-поверхности нет
                         text: visible ? card.rec.body : ""
                         textFormat: Text.StyledText
                         color: Theme.txt2

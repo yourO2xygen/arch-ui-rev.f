@@ -45,6 +45,7 @@ Singleton {
     readonly property int spamLimit: 10
     readonly property int historyLimit: 200
     readonly property double historyTtlMs: 7 * 24 * 3600 * 1000
+    readonly property int freshMs: 60000            // «свежесть» записи истории для dup/replace
 
     // ------------------------------------------------------------- состояние
     property var toasts: []              // записи на экране, новые сверху
@@ -71,6 +72,28 @@ Singleton {
     property int bootId: 0
     property int _uidSeq: 0
     property var _spamLog: []            // времена приёма (мс) для спам-детектора
+
+    // ------------------------------------------------------------- батчинг мутаций
+    // Ревью T4: каскад синхронных мутаций моделей (Repeater/incubator внутри
+    // binding-каскада) — вероятный источник QV4-сегфолта. Все мутации трёх массивов —
+    // in-place; вью видят их ровно один раз за кадр через Qt.callLater(_flush).
+    property bool _dToasts: false
+    property bool _dPending: false
+    property bool _dHistory: false
+    property bool _flushQueued: false
+
+    function _queueFlush() {
+        if (root._flushQueued) return
+        root._flushQueued = true
+        Qt.callLater(root._flush)
+    }
+
+    function _flush() {
+        root._flushQueued = false
+        if (root._dToasts) { root._dToasts = false; root.toasts = root.toasts.slice() }
+        if (root._dPending) { root._dPending = false; root.pendingCriticals = root.pendingCriticals.slice() }
+        if (root._dHistory) { root._dHistory = false; root.historyList = root.historyList.slice() }
+    }
 
     // ------------------------------------------------------------- сервер
     NotificationServer {
@@ -158,7 +181,8 @@ Singleton {
 
     function clearHistory() {
         for (let i = 0; i < root.historyList.length; i++) _release(root.historyList[i])
-        root.historyList = []
+        root.historyList.length = 0
+        _touchHistory()
         _writeDisk()
         console.info("[archui] notif history cleared")
     }
@@ -177,6 +201,17 @@ Singleton {
         const h = Math.floor(m / 60)
         if (h < 24) return h + "h"
         return Math.floor(h / 24) + "d"
+    }
+
+    // transient: свойство QS + строковые/численные варианты хинта (некоторые клиенты
+    // шлют «TRUE»/«TRANSIENT» as-is — ревью T4 minor 7)
+    function _transientOf(n) {
+        if (n.transient === true) return true
+        const h = n.hints && n.hints["transient"] !== undefined ? n.hints["transient"] : null
+        if (h === null) return false
+        if (typeof h === "string") return h.toLowerCase() === "true" || h === "1"
+        const v = Number(h)
+        return !isNaN(v) && v !== 0
     }
 
     // notification.image при icon-name-иконке — это «image://icon/<name>» (fallback
@@ -207,7 +242,10 @@ Singleton {
         const list = n.actions || []
         for (let i = 0; i < list.length; i++) {
             const a = list[i]
-            if (a.identifier === "default") { hasDefault = true; continue }  // не рисуем кнопкой
+            // default не рисуем кнопкой (он на клике по телу); inline-reply не заявлен
+            // capability'ями — некоторые клиенты шлют его вопреки (ревью T4 minor 6)
+            if (a.identifier === "default") { hasDefault = true; continue }
+            if (a.identifier === "inline-reply") continue
             actions.push({ key: a.identifier, label: a.text })
         }
         return {
@@ -221,7 +259,7 @@ Singleton {
             summary: n.summary,
             body: n.body,
             urgency: urg,
-            transient: n.transient,
+            transient: root._transientOf(n),
             time: now,
             timeout: n.expireTimeout,   // мс (NOTIFICATIONS §4: доки врут про секунды)
             actions: actions,           // [{key,label}] без default
@@ -301,7 +339,7 @@ Singleton {
         rec.body = n.body
         rec.urgency = _urgencyOf(n)
         rec.timeout = n.expireTimeout
-        rec.transient = n.transient
+        rec.transient = root._transientOf(n)
         rec.time = Date.now()
         rec.dup = 1
         _syncActions(rec, n)
@@ -320,6 +358,7 @@ Singleton {
         for (let i = 0; i < list.length; i++) {
             const a = list[i]
             if (a.identifier === "default") { hasDefault = true; continue }
+            if (a.identifier === "inline-reply") continue   // ревью T4 minor 6
             actions.push({ key: a.identifier, label: a.text })
         }
         rec.actions = actions
@@ -339,9 +378,10 @@ Singleton {
         if (rec.state === "toast") {
             rec.paused = false
             rec.deadline = _deadlineFor(rec)
-            // обновлённый — наверх стека
-            const rest = root.toasts.filter(r => r !== rec)
-            root.toasts = [rec].concat(rest)
+            // обновлённый — наверх стека (in-place: флаш одним присваиванием за кадр)
+            const idx = root.toasts.indexOf(rec)
+            if (idx > 0) { root.toasts.splice(idx, 1); root.toasts.unshift(rec) }
+            _touchToasts()
         } else {
             _touchHistory()
         }
@@ -353,22 +393,20 @@ Singleton {
             n.closed.connect(reason => root._onClosed(rec, reason))
         }
         n.dismiss()   // дубль-объект клиенту не нужен
-        _touchToasts()
     }
 
     function _route(rec, now) {
         // DND: critical пробивает, low/normal — сразу в историю
         if (root.dnd && rec.urgency !== 2) {
-            rec.state = "history"
-            if (!rec.transient) _pushHistory(rec)
+            _retireToHistory(rec)
             return
         }
-        // спам >10/3s: low/normal сворачиваются в «+N», critical проходит всегда
-        if (_registerSpam(now) && rec.urgency !== 2) {
+        // спам >10/3s: low/normal сворачиваются в «+N»; critical проходит всегда
+        // и в спам-окно не попадает (ревью T4 minor 10)
+        if (rec.urgency !== 2 && _registerSpam(now)) {
             root.floodCount++
             root.lastFloodAt = now
-            rec.state = "history"
-            if (!rec.transient) _pushHistory(rec)
+            _retireToHistory(rec)
             return
         }
         _pushToast(rec)
@@ -391,18 +429,24 @@ Singleton {
             if (victim === -1) {
                 // стек из одних critical: сверхстековый critical — в счётчик «+N critical»
                 rec.state = "pending"
-                root.pendingCriticals = root.pendingCriticals.concat([rec])
+                root.pendingCriticals.unshift(rec)
                 _touchPending()
                 return
             }
             const v = root.toasts[victim]
+            root.toasts.splice(victim, 1)
             if (v.notif !== null) v.notif.expire()   // клиенту NotificationClosed(…, Expired)
-            _closeToast(v)                            // → история (спека: стек ≤4)
+            v.paused = false                          // minor 13
+            _retireToHistory(v)                       // → история (спека: стек ≤4)
+            _touchToasts()
+            // НОВЫЙ вставляется до promotion: освобождённый слот — его, иначе
+            // _promotePending успеет занять слот и стек переполнится до 5
         }
         rec.state = "toast"
         rec.deadline = _deadlineFor(rec)
-        root.toasts = [rec].concat(root.toasts)
+        root.toasts.unshift(rec)
         _touchToasts()
+        _promotePending()
     }
 
     function _deadlineFor(rec) {
@@ -414,46 +458,50 @@ Singleton {
 
     function _closeToast(rec) {
         if (rec.state === "toast") {
-            root.toasts = root.toasts.filter(r => r !== rec)
-            rec.state = "history"
-            if (!rec.transient) _pushHistory(rec)
+            const i = root.toasts.indexOf(rec)
+            if (i !== -1) root.toasts.splice(i, 1)
+            rec.paused = false                     // ревью T4 minor 13: hover-пауза не переживает тост
+            _retireToHistory(rec)
             _touchToasts()
             _promotePending()
         } else if (rec.state === "") {
             // объект закрылся до route (гонка внешнего CloseNotification)
-            rec.state = "history"
-            if (!rec.transient) _pushHistory(rec)
+            rec.paused = false
+            _retireToHistory(rec)
         }
     }
 
     function _promotePending() {
+        let moved = false
         while (root.pendingCriticals.length > 0 && root.toasts.length < root.maxToasts) {
-            const next = root.pendingCriticals[0]
-            root.pendingCriticals = root.pendingCriticals.slice(1)
+            const next = root.pendingCriticals.shift()
+            moved = true
             if (next.notif === null) {
                 // объект мёртв (внешний close) — просто в историю
-                next.state = "history"
-                if (!next.transient) _pushHistory(next)
+                _retireToHistory(next)
                 continue
             }
             next.state = "toast"
+            next.paused = false                    // minor 13
             next.deadline = _deadlineFor(next)
-            root.toasts = root.toasts.concat([next])
+            root.toasts.push(next)
         }
-        _touchPending()
+        if (moved) _touchPending()
     }
 
     function _onClosed(rec, reason) {
         if (rec.state === "toast" || rec.state === "") _closeToast(rec)
         else if (rec.state === "history") {
             // invoke из истории или внешний close по записи истории —
-            // действия потреблены, объект больше не нужен
+            // действия потреблены, объект больше не нужен; тач — чтобы кнопки
+            // мёртвой записи ушли из UI (ревью T4 minor 8)
             _release(rec)
+            _touchHistory()
         } else if (rec.state === "pending") {
-            root.pendingCriticals = root.pendingCriticals.filter(r => r !== rec)
-            rec.state = "history"
-            if (!rec.transient) _pushHistory(rec)
+            const i = root.pendingCriticals.indexOf(rec)
+            if (i !== -1) root.pendingCriticals.splice(i, 1)
             _touchPending()
+            _retireToHistory(rec)
         }
         if (!rec.locked) rec.notif = null   // объект умрёт сразу после обработчика
     }
@@ -465,6 +513,15 @@ Singleton {
         rec.actRefs = []
     }
 
+    // → история. Transient в историю не пишется вовсе: записи нет ни в тостах, ни в
+    // списке истории — живой объект отпускаем сразу, иначе Retainable.lock висит вечно
+    // (ревью T4, Important 3б)
+    function _retireToHistory(rec) {
+        rec.state = "history"
+        if (rec.transient) { _release(rec); return }
+        _pushHistory(rec)
+    }
+
     function _actionObj(rec, key) {
         if (rec.notif === null) return null
         const list = rec.actRefs || []
@@ -473,6 +530,10 @@ Singleton {
         return null
     }
 
+    // Replace ищем только среди живых записей текущего процесса: стек, pending и
+    // свежайшая (< freshMs) запись истории — иначе replace со «спящим» id оживит
+    // закрытую запись недельной давности, а дедуп молча съест повторное уведомление
+    // (ревью T4, Important 1)
     function _findById(id) {
         for (let i = 0; i < root.toasts.length; i++)
             if (root.toasts[i].bootId === root.bootId && root.toasts[i].id === id)
@@ -480,21 +541,30 @@ Singleton {
         for (let i = 0; i < root.pendingCriticals.length; i++)
             if (root.pendingCriticals[i].bootId === root.bootId && root.pendingCriticals[i].id === id)
                 return root.pendingCriticals[i]
-        for (let i = 0; i < root.historyList.length; i++)
-            if (root.historyList[i].bootId === root.bootId && root.historyList[i].id === id)
-                return root.historyList[i]
+        const now = Date.now()
+        for (let i = 0; i < root.historyList.length; i++) {
+            const r = root.historyList[i]
+            if (r.bootId === root.bootId && r.id === id && now - r.time <= root.freshMs)
+                return r
+        }
         return null
     }
 
-    // дубли ищем по живым записям процесса: сначала стек, потом свежайшая запись истории
+    // дубли — та же область, что и replace: живой стек/pending + свежая история
     function _findDup(app, summary, body) {
         const key = _keyOf(app, summary, body)
         for (let i = 0; i < root.toasts.length; i++)
             if (root.toasts[i].bootId === root.bootId && _keyOf(root.toasts[i]) === key)
                 return root.toasts[i]
+        for (let i = 0; i < root.pendingCriticals.length; i++)
+            if (root.pendingCriticals[i].bootId === root.bootId
+                && _keyOf(root.pendingCriticals[i]) === key)
+                return root.pendingCriticals[i]
+        const now = Date.now()
         for (let i = 0; i < root.historyList.length; i++) {
             const r = root.historyList[i]
-            if (r.bootId === root.bootId && _keyOf(r) === key) return r
+            if (r.bootId === root.bootId && _keyOf(r) === key && now - r.time <= root.freshMs)
+                return r
         }
         return null
     }
@@ -506,19 +576,18 @@ Singleton {
 
     // ------------------------------------------------------------- история
     function _pushHistory(rec) {
-        root.historyList = [rec].concat(root.historyList)
+        root.historyList.unshift(rec)
         while (root.historyList.length > root.historyLimit) {
-            const last = root.historyList[root.historyList.length - 1]
-            _release(last)
-            root.historyList = root.historyList.slice(0, root.historyList.length - 1)
+            _release(root.historyList[root.historyList.length - 1])
+            root.historyList.pop()
         }
         _touchHistory()
         persistDebounce.restart()
     }
 
-    function _touchToasts() { root.toasts = root.toasts.slice() }
-    function _touchPending() { root.pendingCriticals = root.pendingCriticals.slice() }
-    function _touchHistory() { root.historyList = root.historyList.slice() }
+    function _touchToasts() { root._dToasts = true; root._queueFlush() }
+    function _touchPending() { root._dPending = true; root._queueFlush() }
+    function _touchHistory() { root._dHistory = true; root._queueFlush() }
 
     // ------------------------------------------------------------- сканер таймеров
     // Один таймер вместо per-record Timer (куча dynamic Timers в QML не нужна).
@@ -535,7 +604,7 @@ Singleton {
         if (root.floodCount > 0 && now - root.lastFloodAt > root.spamWindowMs) {
             root.floodCount = 0   // шторм кончился
         }
-        const list = root.toasts
+        const list = root.toasts.slice()   // копия: _closeToast мутирует in-place
         for (let i = 0; i < list.length; i++) {
             const r = list[i]
             if (r.paused || r.deadline === 0) continue
@@ -543,6 +612,17 @@ Singleton {
                 if (r.notif !== null) r.notif.expire()
                 else _closeToast(r)
             }
+        }
+    }
+
+    // «now»/«12m» в UI должны стареть: периодический тач (раз в 60с достаточно),
+    // только когда тосты или центр видимы (ревью T4 minor 9)
+    Timer {
+        interval: 60000
+        running: root.showing || LayoutState.slots.C === "notifcenter"
+        onTriggered: {
+            if (root.toasts.length > 0) root._touchToasts()
+            if (root.historyList.length > 0) root._touchHistory()
         }
     }
 
@@ -585,6 +665,10 @@ Singleton {
             if (line.length === 0) continue
             let o = null
             try { o = JSON.parse(line) } catch (e) { continue }
+            // валидация чисел: битая (руками правленая/усечённая) строка не роняет
+            // загрузку и не даёт NaN-времени в UI (ревью T4 minor 11)
+            if (typeof o.time !== "number" || isNaN(o.time) || o.time <= 0) continue
+            if (typeof o.id !== "number" || isNaN(o.id)) continue
             if (now - o.time > root.historyTtlMs) continue   // TTL 7д
             recs.push({
                 uid: ++root._uidSeq,
@@ -603,7 +687,7 @@ Singleton {
                 actions: [],             // у записей из JSONL кнопок действий нет
                 hasDefault: false,
                 actRefs: [],
-                dup: o.dup || 1,
+                dup: typeof o.dup === "number" && !isNaN(o.dup) && o.dup > 0 ? o.dup : 1,
                 state: "history",
                 notif: null,
                 locked: false,
@@ -620,9 +704,21 @@ Singleton {
 
     function _writeDisk() {
         const now = Date.now()
-        // TTL-чистка перед записью
-        const alive = root.historyList.filter(r => !r.transient && now - r.time <= root.historyTtlMs)
-        if (alive.length !== root.historyList.length) root.historyList = alive
+        // TTL-чистка перед записью; выкидываемые записи освобождаем — иначе
+        // Retainable.lock утекает (ревью T4, Important 3а)
+        const alive = []
+        const dropped = []
+        for (let i = 0; i < root.historyList.length; i++) {
+            const r = root.historyList[i]
+            if (r.transient || now - r.time > root.historyTtlMs) dropped.push(r)
+            else alive.push(r)
+        }
+        if (dropped.length > 0) {
+            for (let i = 0; i < dropped.length; i++) _release(dropped[i])
+            root.historyList.length = 0
+            for (let i = 0; i < alive.length; i++) root.historyList.push(alive[i])
+            _touchHistory()
+        }
         const lines = []
         const list = root.historyList.slice(0, root.historyLimit)
         for (let i = 0; i < list.length; i++) {
