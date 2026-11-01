@@ -31,7 +31,7 @@ NumberAnimation {
 | Токен | мс | Семантика |
 |---|---|---|
 | `panelOpen` | 420 | открытие: opacity 0→1 + scale .97→1 |
-| `contentDelay` | 430 | контент снимается с паузы на этой мс |
+| `contentDelay` | 140 | контент снимается с паузы на этой мс (Task 12: 430 давало мёртвую зону ~150–430ms) |
 | `contentFade` | 220 | fade контента |
 | `ghostDelay1/2` | 40/140 | задержки двух ghost-контуров |
 | `ghostFade` | 620 | длительность ghost-эха (scale .99→.952, opacity .45→0); **на replace отключено** |

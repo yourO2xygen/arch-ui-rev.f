@@ -15,9 +15,10 @@ Singleton {
     // (последние две единицы — контрольная точка 1,1, требование Qt для BezierSpline)
     readonly property list<real> apple: [0.25, 0.1, 0.25, 1, 1, 1]
 
-    // Панель: открытие 420 → контент на 430-й мс, фейд контента 220 (SPEC §2/§3)
+    // Панель: открытие 420 → контент на 140-й мс (внутри хода волны — непрерывность,
+    // Task 12: 430 давало мёртвую зону ~150-430ms), фейд контента 220 (SPEC §2/§3)
     readonly property int panelOpen: 420
-    readonly property int contentDelay: 430
+    readonly property int contentDelay: 140
     readonly property int contentFade: 220
 
     // Ghost-эхо панели (SPEC §3): +40/+140, scale .99→.952, opacity .45→0, длительность 620

@@ -28,7 +28,7 @@
 ├── Theme.qml              # ТОКЕНЫ: цвета, шрифты, размеры (Singleton)
 ├── Motion.qml             # ДВИЖЕНИЕ: длительности, кривые, параметры глича (Singleton)
 ├── kit/                   # ОБЩИЕ ЭЛЕМЕНТЫ (примитив добавляется вторым использованием)
-│   ├── Panel.qml          # head/body/foot + хореография (420/430/220) + ghost-эхо + глич + mask
+│   ├── Panel.qml          # head/body/foot + хореография (420/140/220) + ghost-эхо + глич + mask
 │   ├── Icon.qml           # Lucide path → Shape/ShapePath (retained), stroke-правило
 │   ├── Row.qml            # строка: hover raise, selected inset, dot-слот
 │   ├── SegBar.qml  Dot.qml  Chip.qml  Btn.qml  Field.qml  Section.qml
@@ -70,7 +70,7 @@
 
 **Slot manager** (`LayoutState`, Singleton): `{A,B,C} → panelId|null`, персист в PersistentProperties. `toggle(panelId)`:
 - слот показывает `panelId` → закрыть (зеркальная хореография);
-- слот пуст → открыть (полная: панель 420ms → контент на 430-й мс 220ms + ghost-эхо + глич);
+- слот пуст → открыть (полная: панель 420ms → контент на 140-й мс 220ms + ghost-эхо + глич);
 - слот показывает другую → **замена**: старая уходит 180ms (fade + scale .97, **без ghost-эхо** — две волны эха читаются как грязь), новая стартует на +120ms **выше по z** (Loader-стек, клип по слоту), фокус переходит явно.
 
 **Жизнь панелей**: после первого открытия экземпляр панели живёт всегда (`Loader.active` не выключаем — деактивация уничтожила бы состояние; невидимое и так не рендерится в SceneGraph). «Спим» только тяжёлое: `enabled/visible` списков, пульс точек, анимации — биндим на `panelVisible`.
@@ -85,7 +85,7 @@
 
 `Theme.qml` — единственное место цветов/размеров: surface #000000, txt #f4f4f5, txt2 #a1a1aa, dim #56565e, ghost #3f3f46, raise rgba(255,255,255,.05), raise2 .09, invBg/invFg для инверсии, strokeE 1.5 (effective stroke иконок: `stroke_vb = 36/size`, пол 1.25). Отступы — фактические значения макета (6/8/10/11/12/13/18 — шкала «кратно 4» в CSS макета не соблюдалась, переносим факт). Шрифты: `"JetBrainsMono NFM"` (400–700, системный) + DSEG7 (FontLoader из assets). Флаг `Theme.glass` — гейтит не видимость, а **создание** текстур стекла.
 
-`Motion.qml` — единственное место движения: `apple = BezierCurve(.25,.1,.25,1)`; panelOpen 420 / contentDelay 430 / contentFade 220; ghostEcho +40/+140 (scale .99→.952, .45→0), **на replace отключено**; replaceExit 180; glitch 350 (панели) / 200 (тосты/бар); caretBlink 1070 (+пауза 900); dotPulse 2s InOutSine только у filled; hover 120; killFade 400; dndToggle 160; launcherGrow 260; barTimeout 2800; toastHover — пауза таймера.
+`Motion.qml` — единственное место движения: `apple = BezierCurve(.25,.1,.25,1)`; panelOpen 420 / contentDelay 140 / contentFade 220; ghostEcho +40/+140 (scale .99→.952, .45→0), **на replace отключено**; replaceExit 180; glitch 350 (панели) / 200 (тосты/бар); caretBlink 1070 (+пауза 900); dotPulse 2s InOutSine только у filled; hover 120; killFade 400; dndToggle 160; launcherGrow 260; barTimeout 2800; toastHover — пауза таймера.
 
 **Глич** (монохром, п.7): `GlitchFX.qml` — ShaderEffect над `layer.enabled` контента панели. Построчный x-сдвиг срезов `hash(uv.y, floor(t*24fps))`, моно-двоение двумя alpha-копиями (не RGB), инверсия случайных полос, flicker яркости, скан-линия. 350ms → `ShaderEffectSource.live=false`, постоянная GPU-цена ноль. Тосты/бар — дешёвый вариант: flicker + x-джиттер ±2px + 2 инверсные полосы. Джиттерим Item внутри поверхности, не окно.
 

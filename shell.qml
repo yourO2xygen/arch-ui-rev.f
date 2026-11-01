@@ -81,7 +81,7 @@ ShellRoot {
     Kit.Panel {
         id: colA
         slot: "A"
-        panels: ["docker", "taskmgr"]
+        panels: ["docker", "taskmgr", "sysinfo"]
         WlrLayershell.namespace: "archui:col-a"
         anchors { left: true; top: true }
         margins.left: 24
@@ -95,6 +95,7 @@ ShellRoot {
                 Text {
                     visible: colA.panelId !== "taskmgr"
                              && colA.panelId !== "docker"
+                             && colA.panelId !== "sysinfo"
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -152,102 +153,10 @@ ShellRoot {
                         font.letterSpacing: 1
                     }
                 }
-            }
-        }
-        // docker — реальная панель (задача 6); taskmgr — реальная панель (задача 5)
-        body: Component {
-            Item {
-                id: bodyA
-                property string panelId: ""
-
-                Loader {
-                    anchors.fill: parent
-                    active: bodyA.panelId === "taskmgr"
-                    sourceComponent: TaskMgr {}
-                }
-                Loader {
-                    anchors.fill: parent
-                    active: bodyA.panelId === "docker"
-                    sourceComponent: Docker {}
-                }
-                Loader {
-                    anchors.fill: parent
-                    active: bodyA.panelId !== "taskmgr" && bodyA.panelId !== "docker"
-                    sourceComponent: Placeholder { panelId: bodyA.panelId }
-                }
-            }
-        }
-        foot: Component {
-            Item {
-                Text {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: colA.panelId === "taskmgr"
-                          ? ProcMon.view.length + " / " + ProcMon.procs.length
-                            + " · sorted by " + ProcMon.sortBy
-                          : colA.panelId === "docker"
-                          ? (DockerMon.dockerPresent
-                             ? DockerMon.runningCount + " running · "
-                               + DockerMon.exitedCount + " exited · v"
-                               + DockerMon.version
-                             : "docker " + (DockerMon.ghostReason === "no permission"
-                                            ? "no permission" : "unavailable"))
-                          : "archui"
-                    color: Theme.dim
-                    font.family: Theme.font
-                    font.pixelSize: 9
-                }
-                Text {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: colA.panelId === "taskmgr" ? "del · term"
-                        : colA.panelId === "docker" ? "logs · res · ports" : "slot a"
-                    color: Theme.dim
-                    font.family: Theme.font
-                    font.pixelSize: 9
-                }
-            }
-        }
-    }
-
-    // --------------------------------------------------------------- СЛОТ B
-    Kit.Panel {
-        id: colB
-        slot: "B"
-        panels: ["launcher", "logout", "sysinfo"]
-        // Лаунчер (T7) — Exclusive на время открытия, при закрытии назад OnDemand (SPEC §2).
-        // Остальным панелям слота остаётся OnDemand из kit/Panel.qml.
-        WlrLayershell.keyboardFocus: LayoutState.slots.B === "launcher"
-                                     ? WlrKeyboardFocus.Exclusive
-                                     : WlrKeyboardFocus.OnDemand
-        WlrLayershell.namespace: "archui:col-b"
-        anchors { left: true; top: true }
-        margins.left: 548
-        margins.top: 332
-        implicitWidth: 504
-        implicitHeight: 544
-
-        head: Component {
-            Item {
-                // head по умолчанию (logout; launcher — оверлей без head, задача 7)
-                Text {
-                    visible: colB.panelId !== "sysinfo"
-                             && colB.panelId !== "launcher"
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: colB.panelId === "" ? "SLOT B" : colB.panelId.toUpperCase()
-                    color: Theme.txt2
-                    font.family: Theme.font
-                    font.pixelSize: 11
-                    font.letterSpacing: 1
-                }
 
                 // sysinfo (ANALYSIS 5.3): i-gauge + SYSINFO · справа чип uptime
                 Row {
-                    visible: colB.panelId === "sysinfo"
+                    visible: colA.panelId === "sysinfo"
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -270,7 +179,7 @@ ShellRoot {
                 }
 
                 Kit.Chip {
-                    visible: colB.panelId === "sysinfo"
+                    visible: colA.panelId === "sysinfo"
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -278,7 +187,109 @@ ShellRoot {
                 }
             }
         }
-        // sysinfo — реальная панель (задача 5); launcher/logout — заглушки до задачи 7
+        // docker — реальная панель (задача 6); taskmgr — реальная панель (задача 5);
+        // sysinfo — реальная панель (задача 5, перенесена из слота B — Task 12)
+        body: Component {
+            Item {
+                id: bodyA
+                property string panelId: ""
+
+                Loader {
+                    anchors.fill: parent
+                    active: bodyA.panelId === "taskmgr"
+                    sourceComponent: TaskMgr {}
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: bodyA.panelId === "docker"
+                    sourceComponent: Docker {}
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: bodyA.panelId === "sysinfo"
+                    sourceComponent: SysInfo {}
+                }
+                Loader {
+                    anchors.fill: parent
+                    active: bodyA.panelId !== "taskmgr"
+                            && bodyA.panelId !== "docker"
+                            && bodyA.panelId !== "sysinfo"
+                    sourceComponent: Placeholder { panelId: bodyA.panelId }
+                }
+            }
+        }
+        foot: Component {
+            Item {
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: colA.panelId === "taskmgr"
+                          ? ProcMon.view.length + " / " + ProcMon.procs.length
+                            + " · sorted by " + ProcMon.sortBy
+                          : colA.panelId === "docker"
+                          ? (DockerMon.dockerPresent
+                             ? DockerMon.runningCount + " running · "
+                               + DockerMon.exitedCount + " exited · v"
+                               + DockerMon.version
+                             : "docker " + (DockerMon.ghostReason === "no permission"
+                                            ? "no permission" : "unavailable"))
+                          : colA.panelId === "sysinfo"
+                          ? Quickshell.env("USER") + "@" + SysMon.hostName
+                          : "archui"
+                    color: Theme.dim
+                    font.family: Theme.font
+                    font.pixelSize: 9
+                }
+                Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: colA.panelId === "taskmgr" ? "del · term"
+                        : colA.panelId === "docker" ? "logs · res · ports"
+                        : colA.panelId === "sysinfo" ? "kernel " + SysMon.kernel : "slot a"
+                    color: Theme.dim
+                    font.family: Theme.font
+                    font.pixelSize: 9
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------------------- СЛОТ B
+    Kit.Panel {
+        id: colB
+        slot: "B"
+        panels: ["launcher", "logout"]
+        // Лаунчер (T7) — Exclusive на время открытия, при закрытии назад OnDemand (SPEC §2).
+        // Остальным панелям слота остаётся OnDemand из kit/Panel.qml.
+        WlrLayershell.keyboardFocus: LayoutState.slots.B === "launcher"
+                                     ? WlrKeyboardFocus.Exclusive
+                                     : WlrKeyboardFocus.OnDemand
+        WlrLayershell.namespace: "archui:col-b"
+        anchors { left: true; top: true }
+        margins.left: 548
+        margins.top: 332
+        implicitWidth: 504
+        implicitHeight: 544
+
+        head: Component {
+            Item {
+                // head по умолчанию (logout; launcher — оверлей без head, задача 7)
+                Text {
+                    visible: colB.panelId !== "launcher"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: colB.panelId === "" ? "SLOT B" : colB.panelId.toUpperCase()
+                    color: Theme.txt2
+                    font.family: Theme.font
+                    font.pixelSize: 11
+                    font.letterSpacing: 1
+                }
+            }
+        }
+        // launcher — реальная панель (задача 7, оверлей); logout — реальная панель (задача 7)
         body: Component {
             Item {
                 id: bodyB
@@ -286,18 +297,12 @@ ShellRoot {
 
                 Loader {
                     anchors.fill: parent
-                    active: bodyB.panelId === "sysinfo"
-                    sourceComponent: SysInfo {}
-                }
-                Loader {
-                    anchors.fill: parent
                     active: bodyB.panelId === "logout"
                     sourceComponent: Logout {}
                 }
                 Loader {
                     anchors.fill: parent
-                    active: bodyB.panelId !== "sysinfo"
-                            && bodyB.panelId !== "logout"
+                    active: bodyB.panelId !== "logout"
                             && bodyB.panelId !== "launcher"
                     sourceComponent: Placeholder { panelId: bodyB.panelId }
                 }
@@ -344,9 +349,7 @@ ShellRoot {
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
                     visible: colB.panelId !== "launcher"
-                    text: colB.panelId === "sysinfo"
-                          ? Quickshell.env("USER") + "@" + SysMon.hostName
-                          : colB.panelId === "logout"
+                    text: colB.panelId === "logout"
                           ? Quickshell.env("USER") + " · up "
                             + SysMon.fmtUptime(SysMon.uptimeSec)
                           : "archui"
@@ -359,7 +362,7 @@ ShellRoot {
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
                     visible: colB.panelId !== "launcher"
-                    text: colB.panelId === "sysinfo" ? "kernel " + SysMon.kernel : "slot b"
+                    text: "slot b"
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 9

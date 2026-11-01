@@ -6,6 +6,21 @@
 Полная спека: [SPEC.md](SPEC.md) (поведение, решения, открытые вопросы).
 Дизайн-исследования: [../research/](../research/).
 
+## Установка (чистая машина)
+
+1. **Файлы**: репозиторий кладётся в `~/.config/quickshell/shell` (config name — `shell`).
+2. **Демон**: `qs -c shell --no-duplicate --daemonize`. Автостарт — в hyprland.lua:
+   `hl.exec_cmd("qs -c shell --no-duplicate --daemonize")` внутри `hl.on("hyprland.start", …)`.
+   Логи после рестарта — только qslog by-id (см. «Запуск» ниже).
+3. **Конфиг hyprland** (`~/.config/hypr/hyprland.lua`): блок биндов ARCH·UI
+   (helper `archui(panel)`, глобал лаунчера `hl.dsp.global("archui:launcher")`),
+   blur-правила `layer_rule` для namespaces `archui:*`, маска dunst:
+   `systemctl --user mask dunst.service` (шелл сам — notification daemon).
+4. **Зависимости**: quickshell 0.3.2, qt6-shadertools (qsb), hyprland 0.57;
+   опционально `sudo usermod -aG docker gitgut` (панель docker без ghost «no permission»).
+5. **Экран**: сетка рассчитана от логической 1600×900 (scale 1.2). На других
+   разрешениях маски/позиции могут не совпадать — сверяйся с docs/layout.md.
+
 ## Запуск
 
 Каноническая команда (одна единственная форма — хоткеи, автостарт и
@@ -64,15 +79,15 @@ qs -c shell ipc call archui dismissToasts      # убрать все тосты
 | Клавиши | Действие |
 |---|---|
 | SUPER+R | лаунчер (GlobalShortcut) |
-| SUPER+S / D / T | sysinfo / docker / taskmgr |
-| SUPER+C / L | показать/скрыть календарь / logout |
-| SUPER+A / SUPER+SHIFT+A | чат / менеджер агента |
+| SUPER+Z / SUPER+SHIFT+A / SUPER+A | sysinfo / docker / taskmgr (слот A) |
+| SUPER+C / L | показать/скрыть календарь / logout (слот B) |
+| SUPER+D / SUPER+SHIFT+D | чат / менеджер агента (слот C) |
 | SUPER+N / SUPER+SHIFT+N | центр уведомлений / DND toggle |
-| SUPER+SHIFT+S | статус-бар |
+| SUPER+X | статус-бар |
+| SUPER+SHIFT+S | скриншот-регион |
 
-Файл: `~/.config/hypr/hyprland.lua` (вне репо). Вытесненные старые бинды
-(SUPER+S «magic»-воркспейс, SUPER+SHIFT+S скриншот-регион) закомментированы в
-файле — вернуть на свободные клавиши при желании.
+Файл: `~/.config/hypr/hyprland.lua` (вне репо). Спец-воркспейс «magic» остаётся
+закомментированным в файле; свободные клавиши после Task 12: SUPER+S, SUPER+T.
 
 ## Что не проверено автоматом (за пользователем)
 

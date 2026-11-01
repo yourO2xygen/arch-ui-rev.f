@@ -3,7 +3,7 @@
 //
 // Хореография (SPEC §2/§3, ANALYSIS §3.1):
 //   · открытие из пустого слота: панель opacity 0→1 + scale .97→1, 420ms apple;
-//     контент (head/body/foot) — fade 220ms, снимается таймером на 430-й мс;
+//     контент (head/body/foot) — fade 220ms, снимается таймером на 140-й мс;
 //     ghost-эхо — 2 контурных Rect 1px (scale .99→.952, opacity .45→0, +40/+140, 620ms).
 //   · замена: старая ячейка уходит 180ms (fade + scale .97), новая активируется
 //     на +120ms выше по z (Loader-стек, клип по слоту), БЕЗ ghost-эхо.
@@ -68,7 +68,7 @@ PanelWindow {
     property string _current: ""      // panelId, показанный сейчас ("" — слот закрыт)
     property var _opened: []          // panelId'ы, открывавшиеся хоть раз — Loader.active не гасим
     property bool _maskActive: false  // прямоугольная маска ввода
-    property real _contentStage: 0    // 0..1 — стадия контента (хореография 430/220)
+    property real _contentStage: 0    // 0..1 — стадия контента (хореография 140/220)
     property var _nextCell: null      // ячейка, ожидающая replaceTimer
     property bool _glitchRun: false   // GlitchFX активен ТОЛЬКО во время перехода (SPEC §8)
     property real _glitchProgress: 1  // 0→1 за Motion.glitchPanel; 1 = нейтрально/выкл
@@ -229,7 +229,7 @@ PanelWindow {
         onStopped: panel._afterClose()
     }
 
-    // Контент: fade 220, снимается таймером на 430-й мс (открытие из пустого)
+    // Контент: fade 220, снимается таймером на 140-й мс (открытие из пустого)
     SequentialAnimation {
         id: contentIn
         PauseAnimation { duration: Motion.contentDelay }
@@ -239,7 +239,7 @@ PanelWindow {
         }
     }
 
-    // Контент при замене: только входящая ячейка (хром не мигает), тот же 430/220
+    // Контент при замене: только входящая ячейка (хром не мигает), тот же 140/220
     SequentialAnimation {
         id: replaceInner
         PauseAnimation { duration: Motion.contentDelay }
@@ -395,7 +395,7 @@ PanelWindow {
         openInner.property = "opacity"
         contentIn.restart()
         if (withGhost) ghostRun.restart()
-        _glitchStart()   // Task 9: глич поверх fade+scale (совместим с 430/220 контента)
+        _glitchStart()   // Task 9: глич поверх fade+scale (совместим с 140/220 контента)
     }
 
     function playClose() {
