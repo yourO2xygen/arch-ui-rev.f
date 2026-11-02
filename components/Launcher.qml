@@ -15,6 +15,7 @@ import Quickshell
 import Quickshell.Io
 import ".."
 import "../kit" as Kit
+import "layout.js" as Layout
 
 Item {
     id: root
@@ -45,12 +46,15 @@ Item {
 
     function _refilter() {
         const q = root.query.toLowerCase()
+        // Транслит один раз на фильтрацию: запрос в неверной раскладке
+        // («ашкуащч») матчится как «firefox», см. layout.js
+        const qt = Layout.translit(q)
         const out = []
         const apps = root._apps
         for (let i = 0; i < apps.length; i++) {
             const e = apps[i]
             if (e.noDisplay || !e.execString) continue
-            if (q.length > 0 && (e.name ? e.name : e.id).toLowerCase().indexOf(q) === -1)
+            if (q.length > 0 && !Layout.matches(q, qt, (e.name ? e.name : e.id).toLowerCase()))
                 continue
             out.push(e)
         }
