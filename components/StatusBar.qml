@@ -184,25 +184,35 @@ Item {
 
     // ---------------------------------------------------- яркость (sysfs poll)
     // Quickshell 0.3.2 без Brightness-сервиса; sysfs не поддерживает inotify →
-    // FileView с blockLoading (свежий синхронный read на каждый text()), поллинг
-    // ~300ms только пока mode==="brightness". Триггер показа — IPC из бинда
-    // (hyprland.lua append `&& qs ... osd brightness`), дебаунс 150ms.
+    // FileView + поллинг ~300ms только пока mode==="brightness". Триггер показа —
+    // IPC из бинда (hyprland.lua append `&& qs ... osd brightness`), дебаунс 150ms.
+    // Task 21: blockLoading делает синхронным только ПЕРВЫЙ read (дальше text()
+    // вечно отдаёт кеш — он не следит за файлом без watchChanges, а sysfs нельзя
+    // inotify). Идиома свежего чтения: перед каждым text() дергать reload()
+    // (сбрасывает кеш) при blockAllReads (тогда text() делает loadSync —
+    // синхронный read с диска; FileView::shouldBlockRead, src/io/fileview.cpp).
     FileView {
         id: sysBrightness
         path: "/sys/class/backlight/intel_backlight/brightness"
         preload: false
         blockLoading: true
+        blockAllReads: true
     }
     FileView {
         id: sysMaxBrightness
         path: "/sys/class/backlight/intel_backlight/max_brightness"
         preload: false
         blockLoading: true
+        blockAllReads: true
     }
 
     property real _lastBright: -1   // последний показанный/зафиксированный (0..1)
 
     function _brightnessNow() {
+        // Task 21: reload() перед text() — иначе text() отдаёт кеш первого
+        // чтения (см. комментарий к FileView выше).
+        sysBrightness.reload()
+        sysMaxBrightness.reload()
         const raw = parseFloat(sysBrightness.text())
         const max = parseFloat(sysMaxBrightness.text())
         if (!isFinite(raw) || !isFinite(max) || max <= 0) return -1

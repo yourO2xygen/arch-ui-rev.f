@@ -74,10 +74,28 @@ Critical-уведомления сверх стека тостов сворач�
 
 ## KeyboardFocus
 
-- launcher — `Exclusive` при открытии (хоткеи и фокус целиком у поля поиска);
-- все остальные слот-панели — `OnDemand` (фокус по клику, глобальные хоткеи
-  не воруются; клик мимо — фокус уходит, лаунчер дополнительно закрывается
-  через HyprlandFocusGrab);
+Семантика hyprland-focus-grab-v1 (Task 21, сверено с src/wayland/hyprland/focus_grab
+в quickshell и src/protocols/FocusGrab.cpp + SeatManager в Hyprland): активный
+grab — это seat grab по pointer И клавиатуре разом; при активации композитор
+отдаёт `wl_keyboard::enter` первой скоммиченной беленой поверхности
+(`CFocusGrab::start → refocusKeyboard → rawSurfaceFocus`), НЕ спрашивая
+`WlrLayershell.keyboard_interactivity`. «Пассивной» формы grab не бывает —
+любое открытие захватной панели ворует клавиатуру у активного тайла (ломались
+раскладка `grp:alt_shift_toggle` и ввод активного окна).
+
+Решение (shell.qml):
+
+- launcher — `Exclusive` при открытии: клавиатура отдана лаунчеру по назначению;
+- слот-окна — `OnDemand`: клавиатура у панели только после клика в неё;
+- клик-мимо закрывает слот-панели/календарь/бар через dismiss-grab
+  (`HyprlandFocusGrab` на [colA, colB, colC, calendar, bar], активен при любой
+  открытой панели). Чтобы активация grab не воровала клавиатуру, она сразу
+  возвращается последнему активному XDG-окну: shell.qml кеширует адрес из
+  rawEvent `activewindowv2` и по `onActiveChanged` делает
+  `Hyprland.dispatch("focuswindow address:…")` (кроме случая открытого
+  лаунчера). Grab после этого живёт только как клик-детектор: фокус и ввод —
+  у тайла, клик мимо очищает grab → панели закрываются, клик в панель возвращает
+  фокус ей (OnDemand);
 - при закрытии слота фокус-режим возвращается в `OnDemand` (не `None`) — окно
   скрыто и маска пуста, практической разницы нет; зафиксировано как осознанное
   решение.

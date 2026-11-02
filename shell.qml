@@ -413,22 +413,51 @@ ShellRoot {
         }
     }
 
+    // ------------------------------------------------- клавиатура и grab (Task 21)
+    // Семантика hyprland-focus-grab-v1 (сверено с реализациями quickshell
+    // src/wayland/hyprland/focus_grab и Hyprland src/protocols/FocusGrab.cpp):
+    // grab — это seat grab по pointer И клавиатуре разом; при активации
+    // композитор ОТДАЁТ wl_keyboard::enter первой скоммиченной беленой
+    // поверхности (CFocusGrab::start → refocusKeyboard → rawSurfaceFocus),
+    // не спрашивая WlrLayershell.keyboard_interactivity. «Пассивного» grab
+    // не бывает — активированная панель всегда ворует клавиатуру у тайла
+    // (ломается grp:alt_shift_toggle-раскладка и ввод активного окна).
+    // Дисмисс-граб ниже оставлен (клик мимо должен закрывать панели), а
+    // украденную клавиатуру его активация сразу возвращает последнему
+    // активному XDG-окну — Hyprland.activeToplevel (событие activewindowv2
+    // при уходе фокуса на слой не приходит, т.е. это ровно то окно, у
+    // которого клавиатуру и нужно вернуть) через foreign-toplevel activate().
+    // Лаунчер (Exclusive) — осознанное исключение: ему клавиатура и нужна.
+
+    // Реакция на активацию dismiss-grab: вернуть клавиатуру прежнему окну.
+    function _returnKeyboard() {
+        if (LayoutState.slots.B === "launcher") return
+        const tl = Hyprland.activeToplevel
+        if (tl === null || tl.wayland === null) return
+        tl.wayland.activate()
+    }
+
     // Дисмисс слот-панелей (Task 15): клик ЛКМ вне открытых панелей archui
     // закрывает ВСЕ видимые панели слот-типа (слоты + календарь + бар) штатной
-    // хореографией LayoutState. Идиома как у лаунчера: HyprlandFocusGrab пассивно
-    // белит список окон (обычный ввод сохраняется), клик вне списка гасит grab
-    // (onCleared). keyboardFocus слотов остаётся OnDemand — хоткеи Hyprland и фокус
-    // тайлов не воруются. Grab активирован, пока открыта хоть одна панель; все
-    // close* идемпотентны, поэтому повторный onCleared (гашение grab при штатном
-    // закрытии) безвреден. Лаунчер закрывается собственным grab'ом выше — в
+    // хореографией LayoutState. Идиома как у лаунчера: HyprlandFocusGrab белит
+    // список окон, клик вне списка гасит grab (onCleared). Grab активирован,
+    // пока открыта хоть одна панель; все close* идемпотентны, поэтому повторный
+    // onCleared (гашение grab при штатном закрытии) безвреден. Активация grab
+    // уводит клавиатуру в панель — возвращаем её прежнему окну сразу (см.
+    // разбор Task 21 выше), поэтому keyboardFocus слотов (OnDemand) и ввод
+    // тайла не страдают. Лаунчер закрывается собственным grab'ом выше — в
     // active-условие не входит, чтобы с ним не пересекаться.
     HyprlandFocusGrab {
+        id: dismissGrab
         active: colA.open
                 || LayoutState.slots.B === "logout"
                 || colC.open
                 || calendar.visible
                 || LayoutState.slots.bar !== null
         windows: [colA, colB, colC, calendar, bar]
+        // Активация grab уводит клавиатуру в панель (см. разбор выше) — сразу
+        // возвращаем её прежнему окну; grab остаётся жить как клик-детектор.
+        onActiveChanged: if (dismissGrab.active) root._returnKeyboard()
         onCleared: {
             if (colA.open || LayoutState.slots.B !== null || colC.open
                 || calendar.visible || LayoutState.slots.bar !== null) {
