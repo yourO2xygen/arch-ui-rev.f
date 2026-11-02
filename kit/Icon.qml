@@ -22,8 +22,14 @@ Item {
     property real size: 14
     property color color: Theme.txt
 
-    implicitWidth: size
-    implicitHeight: size
+    // Рендер-граница (багволна A): size снапится в целые пиксели — дробный
+    // implicit-размер даёт дробный scale (size/24) и дробный stroke на
+    // device-сетке → полоски/крошки вокруг глифа. Все вызовы передают целые
+    // размеры, но механизм не должен зависеть от договорённости.
+    readonly property int sizePx: Math.max(1, Math.round(size))
+
+    implicitWidth: sizePx
+    implicitHeight: sizePx
 
     // внутреннее: готовая геометрия из IconData
     readonly property string _d: IconData.loaded && IconData.shapes.hasOwnProperty(name)
@@ -49,13 +55,13 @@ Item {
         width: 24
         height: 24
         transformOrigin: Item.TopLeft
-        scale: root.size / 24
+        scale: root.sizePx / 24
         visible: root._found
         asynchronous: false
 
         ShapePath {
             strokeColor: root.color
-            strokeWidth: Math.max(1.25, Theme.strokeE * 24 / root.size)
+            strokeWidth: Math.max(1.25, Theme.strokeE * 24 / root.sizePx)
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin

@@ -38,8 +38,17 @@ Singleton {
         for (const nm in data) {
             const parts = data[nm];
             let d = "";
-            for (let i = 0; i < parts.length; i++)
-                d += _elemToPath(parts[i][0], parts[i][1]) + " ";
+            for (let i = 0; i < parts.length; i++) {
+                let e = _elemToPath(parts[i][0], parts[i][1]);
+                // Каждый SVG-элемент lucide — самостоятельный path: его
+                // относительный 'm' отсчитывается от (0,0). При склейке в одну
+                // строку endpoint предыдущего элемента НЕ должен участь:
+                // без этого сброса под-пути уезжают за 24×24 и рисуются
+                // «пикселями/полосками» ПОД иконкой (багволна A).
+                if (!e.startsWith("M"))
+                    e = "M0 0 " + e;
+                d += e + " ";
+            }
             map[nm] = d.trim();
         }
         root.shapes = map;
@@ -73,15 +82,22 @@ Singleton {
                  + ` H ${x + rx} A ${rx} ${ry} 0 0 1 ${x} ${y + h - ry}`
                  + ` V ${y + ry} A ${rx} ${ry} 0 0 1 ${x + rx} ${y} Z`;
         }
+        // Точный 180°-арк (хорда = диаметр) с large-arc-flag вырожден для
+        // тесселлятора stroke'а на части бэкендов (полоски/крошки на маленьких
+        // size) — ради ломаной на четыре четверти с однозначными флагами.
         case "circle": {
             const cx = +a.cx, cy = +a.cy, r = +a.r;
-            return `M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy}`
-                 + ` A ${r} ${r} 0 1 0 ${cx - r} ${cy} Z`;
+            return `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx} ${cy - r}`
+                 + ` A ${r} ${r} 0 0 1 ${cx + r} ${cy}`
+                 + ` A ${r} ${r} 0 0 1 ${cx} ${cy + r}`
+                 + ` A ${r} ${r} 0 0 1 ${cx - r} ${cy} Z`;
         }
         case "ellipse": {
             const cx = +a.cx, cy = +a.cy, rx = +a.rx, ry = +a.ry;
-            return `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy}`
-                 + ` A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z`;
+            return `M ${cx - rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx} ${cy - ry}`
+                 + ` A ${rx} ${ry} 0 0 1 ${cx + rx} ${cy}`
+                 + ` A ${rx} ${ry} 0 0 1 ${cx} ${cy + ry}`
+                 + ` A ${rx} ${ry} 0 0 1 ${cx - rx} ${cy} Z`;
         }
         default:
             console.warn(`[IconData] unsupported tag: "${tag}"`);
