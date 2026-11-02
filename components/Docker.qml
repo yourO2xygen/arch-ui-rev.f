@@ -1,8 +1,8 @@
 // ARCH·UI v2 — components/Docker.qml (SPEC §4, DESIGN §4 «docker»)
-// Панель контейнеров (слот A, panelId "docker"): слева список 184px (Dot состояния,
-// имя, порт справа, разделитель 1px), справа тулбар h26 (имя 12/600 + чип состояния +
+// Панель контейнеров (слот A, panelId "docker"): слева список f(200) (Dot состояния,
+// имя, порт справа, разделитель 1px), справа тулбар f(26) (имя fs12/600 + чип состояния +
 // start/stop/restart/logs) и табы Logs / Resources / Ports. Logs — терминальный
-// блок 10px/1.7: время dim, warn — txt2 bold, error — инверсия. Resources — 4 строки
+// блок fs13×1.7: время dim, warn — txt2 bold, error — инверсия. Resources — 4 строки
 // «метка значение + SegBar» + health. Данные — push из DockerMon.
 //
 // Нет docker/нет прав → ghost: строки «—» и подпись причины, процессов не дёргаем.
@@ -16,9 +16,19 @@ Item {
 
     property string panelId: ""
 
-    readonly property int listW: 184
+    // Task 22/24: фикс-литералы (184/26/60/42/102/17) переведены на Theme-производные —
+    // список шире под имена контейнеров (fs11≈15), логи — fs13/строка по шрифту (~20 строк).
+    readonly property int listW: Theme.f(200)
     readonly property int rowH: Theme.hRowS
-    readonly property int toolH: 26
+    readonly property int toolH: Theme.f(26)
+    readonly property int logRowH: Theme.f(22)      // 13×1.7 ≈ 22 база
+    readonly property int colTs: Theme.f(72)       // время лога «HH:MM:SS» @fs13
+    readonly property int colSrc: Theme.f(50)      // источник (elide)
+    readonly property int colHost: Theme.f(132)    // PORTS: хост «[::]:8888»
+    // Resources: резерв значения справа от полосы — самый широкий «23.45MiB / 15.42GiB»
+    // при fs9≈11px (значения метрик docker — осознанное исключение из +25%: строка
+    // с живой полосой не вместит 20-символьное значение более крупным шрифтом)
+    readonly property int colResVal: Theme.f(136)
     // иконочка тулбара 22×22 (пока одно использование — инлайн, в kit не выносим)
     component IconBtn: Rectangle {
         id: ib
@@ -376,12 +386,12 @@ Item {
                                 // burst не пересоздаёт делегаты (паттерн ProcMon)
                                 model: DockerMon.logModel
 
-                                // строка 10px × 1.7 = 17px; error — инверсия
+                                // строка fs13 × 1.7 (Task 24); error — инверсия
                                 delegate: Item {
                                     required property var modelData
                                     readonly property var ln: modelData
                                     width: logCol.width
-                                    height: 17
+                                    height: root.logRowH
 
                                     Rectangle {
                                         anchors.fill: parent
@@ -392,8 +402,8 @@ Item {
                                     Row {
                                         anchors.fill: parent
                                         Text {
-                                            width: 60
-                                            height: 17
+                                            width: root.colTs
+                                            height: root.logRowH
                                             text: ln.ts
                                             color: ln.level === "error"
                                                    ? Theme.invFg : Theme.dim
@@ -403,8 +413,8 @@ Item {
                                         }
                                         // источник (DESIGN §4: время dim, источник txt2)
                                         Text {
-                                            width: 42
-                                            height: 17
+                                            width: root.colSrc
+                                            height: root.logRowH
                                             text: ln.src
                                             color: ln.level === "error"
                                                    ? Theme.invFg : Theme.txt2
@@ -414,14 +424,14 @@ Item {
                                             verticalAlignment: Text.AlignVCenter
                                         }
                                         Text {
-                                            width: parent.width - 102
-                                            height: 17
+                                            width: parent.width - root.colTs - root.colSrc
+                                            height: root.logRowH
                                             text: ln.text
                                             color: ln.level === "error" ? Theme.invFg
                                                  : ln.level === "warn" ? Theme.txt2
                                                  : Theme.txt2
                                             font.family: Theme.font
-                                            font.pixelSize: Theme.fs10
+                                            font.pixelSize: Theme.fs13
                                             font.weight: ln.level === "warn" ? Font.Bold
                                                          : Font.Normal
                                             elide: Text.ElideRight
@@ -471,18 +481,20 @@ Item {
                                 }
                                 Kit.SegBar {
                                     anchors.left: parent.left
-                                    anchors.leftMargin: 88
+                                    anchors.leftMargin: Theme.wLabel
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: parent.width - 88 - 96
+                                    width: parent.width - Theme.wLabel - root.colResVal
                                     value: modelData.frac
                                 }
                                 Text {
                                     anchors.right: parent.right
                                     anchors.verticalCenter: parent.verticalCenter
+                                    width: root.colResVal
                                     text: modelData.value
                                     color: Theme.txt2
                                     font.family: Theme.font
-                                    font.pixelSize: Theme.fs11
+                                    font.pixelSize: Theme.fs9
+                                    elide: Text.ElideRight
                                     horizontalAlignment: Text.AlignRight
                                     verticalAlignment: Text.AlignVCenter
                                 }
@@ -508,7 +520,7 @@ Item {
                             }
                             Text {
                                 anchors.left: parent.left
-                                anchors.leftMargin: 88
+                                anchors.leftMargin: Theme.wLabel
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: root.sel ? (root.sel.health === "none"
                                       ? "—" : root.sel.health) : "—"
@@ -543,12 +555,12 @@ Item {
                             delegate: Item {
                                 required property var modelData
                                 width: parent.width
-                                height: 26
+                                height: Theme.hRowS
 
                                 Text {
                                     anchors.left: parent.left
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: 120
+                                    width: root.colHost
                                     text: modelData.host
                                     color: Theme.txt2
                                     elide: Text.ElideMiddle
@@ -558,7 +570,7 @@ Item {
                                 }
                                 Text {
                                     anchors.left: parent.left
-                                    anchors.leftMargin: 124
+                                    anchors.leftMargin: root.colHost + Theme.s6
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: "→"
                                     color: Theme.dim
@@ -568,7 +580,7 @@ Item {
                                 }
                                 Text {
                                     anchors.left: parent.left
-                                    anchors.leftMargin: 142
+                                    anchors.leftMargin: root.colHost + Theme.s6 + 22
                                     anchors.right: parent.right
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: modelData.target

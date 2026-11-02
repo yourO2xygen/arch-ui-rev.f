@@ -18,11 +18,15 @@ Item {
     property string panelId: ""
 
     readonly property int rowH: Theme.hRow
-    readonly property int colPid: 44
-    readonly property int colCpu: 56
-    readonly property int colMem: 64
-    readonly property int colUser: 88
-    readonly property int colKill: 34
+    // Колонки — Theme-производные (Task 22/24: фикс-литералы 44/56/64/88/34 не
+    // масштабировались, при fs11≈15 «104.5 MiB» не влезала). Базы подобраны под
+    // типовые данные: pid ≤6 цифр (58), cpu «100.0» (67), mem «104.5 MiB»+pad 8 (92),
+    // user «systemd-resolve» (112), kill-кнопка (42). Эфф. при px≈1.04.
+    readonly property int colPid: Theme.f(56)
+    readonly property int colCpu: Theme.f(64)
+    readonly property int colMem: Theme.f(88)
+    readonly property int colUser: Theme.f(108)
+    readonly property int colKill: Theme.f(40)
     readonly property real colName: width - colPid - colCpu - colMem - colUser - colKill
 
     // ------------------------------------------------------- фильтр + сортировка

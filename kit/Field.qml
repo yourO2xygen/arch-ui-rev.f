@@ -1,10 +1,11 @@
 // ARCH·UI v2 — kit/Field.qml (ANALYSIS: поле ввода — фон raise, фокус raise2; каретка-
-// подчёркивание 8×2, blink Motion.caretBlink (1070) с паузой Motion.caretPause (900)
-// после ввода). Переиспользуемое поле: лаунчер (h48), фильтр taskmgr (h34), чат (h40).
+// подчёркивание 3×2 (Task 24: ширина 8px перекрывала глиф), blink Motion.caretBlink
+// (1070) с паузой Motion.caretPause (900) после ввода). Переиспользуемое поле:
+// лаунчер (Theme.hDock), фильтр taskmgr (implicitHeight = Theme.hRowL), чат (f(40)).
 //
 // Использование:
 //   import "../kit"
-//   Field { height: 48; placeholder: "run…"; caretW: 9; onAccepted: … }
+//   Field { height: Theme.hDock; placeholder: "run…"; onAccepted: … }
 //   Field { onTextEdited: … }
 //
 // Сигналы: textEdited(string), accepted() (Enter), escPressed() (Esc — наверх не пускаем).
@@ -20,7 +21,7 @@ Rectangle {
     property alias text: input.text
     property alias input: input
     property string placeholder: ""
-    property int caretW: 8
+    property int caretW: 3
     property int caretH: 2
     property real fontPx: Theme.fs11
     signal textEdited(string text)
@@ -29,7 +30,7 @@ Rectangle {
     signal navUp()   // ↑/↓ — потребителю (лаунчер: навигация списка); наверх не пускаем
     signal navDown()
 
-    implicitHeight: 34
+    implicitHeight: Theme.hRowL
     color: input.activeFocus ? Theme.raise2 : Theme.raise
     border.width: 0
 

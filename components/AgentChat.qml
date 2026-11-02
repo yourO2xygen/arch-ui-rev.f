@@ -21,7 +21,7 @@ Item {
     property string panelId: ""
 
     readonly property int rowH: Theme.hRow
-    readonly property int fieldH: 40
+    readonly property int fieldH: Theme.f(40)   // Task 24: было фикс 40
     // максимальная ширина пузыря — ~78% ленты (pad панели уже срезан Panel.qml)
     readonly property real bubbleMaxW: width * 0.78
 

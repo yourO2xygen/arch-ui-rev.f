@@ -33,6 +33,25 @@ ShellRoot {
     readonly property int slotH: Math.round(544 * Theme.px)
     readonly property int slotY: scrH - slotH - pad
 
+    // --- Слот B: компактное окно (Task 24, втрое ниже 544) ---
+    // Высота живёт содержимым: launcher ст.1 = dock only (50), ст.2 = dock + 4 строки
+    // (Theme.hSlotB); logout = хром + 2 ряда плиток по центру (241). При закрытии
+    // (slots.B = null) высота ЗАМОРАЖИВАЕТСЯ — окно уходит волной в прежней геометрии.
+    // Паддинги 12/16 — те же литералы, что body кит kit/Panel.qml.
+    property int colBH: Theme.hDock
+    function _syncColBH() {
+        const pid = LayoutState.slots.B
+        if (pid === "launcher")
+            colBH = LayoutState.launcherStage2 ? Theme.hSlotB : Theme.hDock
+        else if (pid === "logout")
+            colBH = Theme.hHead + 12 + 2 * Theme.hTile + Theme.s6 + 16 + Theme.hFoot
+    }
+    Connections {
+        target: LayoutState
+        function onSlotsChanged() { root._syncColBH() }
+        function onLauncherStage2Changed() { root._syncColBH() }
+    }
+
     // Тумблер DND (ANALYSIS §5.5 .sw: 32×18, бегунок 14×14, 160ms — Motion.dndToggle)
     component DndToggle: Rectangle {
         id: tg
@@ -88,12 +107,15 @@ ShellRoot {
         }
     }
 
-    Component.onCompleted: console.info(
+    Component.onCompleted: {
+        root._syncColBH()   // персист мог открыть слот B при старте (Task 24)
+        console.info(
         Quickshell.screens.length === 0
         ? "[archui] shell loaded · no screens (headless)"
         : `[archui] shell loaded · screen ${Quickshell.screens[0].name} ` +
           `${Quickshell.screens[0].width}x${Quickshell.screens[0].height} ` +
           `@${Quickshell.screens[0].scale}`)
+    }
 
     // --------------------------------------------------------------- СЛОТ A
     Kit.Panel {
@@ -294,9 +316,23 @@ ShellRoot {
         WlrLayershell.namespace: "archui:col-b"
         anchors { left: true; top: true }
         margins.left: Math.round((root.scrW - root.slotW) / 2)
-        margins.top: root.slotY
+        // y от низа: нижняя кромка приклеена к scrH−pad, верх растёт с контентом.
+        // margin читает ТЕКУЩУЮ implicitHeight — она анимируется Behavior ниже,
+        // так что низ едет ровно за анимированной высотой (одна кривая, без второй
+        // анимации на grouped-свойстве margins).
+        margins.top: root.scrH - colB.implicitHeight - root.pad
         implicitWidth: root.slotW
-        implicitHeight: root.slotH
+        implicitHeight: root.colBH
+        // Ресайз окна синхронен росту списка лаунчера (Motion.launcherGrow apple):
+        // список и окно растут одной кривой → верхняя кромка окна едет ровно по
+        // верхней кромке списка (лишнего стекла над dock нет).
+        Behavior on implicitHeight {
+            NumberAnimation {
+                duration: Motion.launcherGrow
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Motion.apple
+            }
+        }
 
         head: Component {
             Item {
@@ -746,14 +782,15 @@ ShellRoot {
 
     // ------------------------------------------------------------------ BAR
     // Транзиент: автоскрытие Motion.barTimeout (hover-hold, рестарт по toggleBar)
-    // живёт в components/StatusBar.qml. 500×44 top-center.
+    // живёт в components/StatusBar.qml. Task 24: ширина 360·px (~375) — контент
+    // («часы/воркспейсы/язык» и ОСД 240-сегм) вписывается; было 500. 44 top-center.
     PanelWindow {
         id: bar
         WlrLayershell.namespace: "archui:bar"
         anchors { left: true; top: true }
         margins.top: 0
         margins.left: Math.round((root.scrW - bar.implicitWidth) / 2)
-        implicitWidth: Math.round(500 * Theme.px)
+        implicitWidth: Theme.wBar
         implicitHeight: Math.round(44 * Theme.px)
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore

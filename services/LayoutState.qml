@@ -40,6 +40,11 @@ Singleton {
 
     readonly property bool dnd: persist.dnd
 
+    // Volatile (НЕ персистится, Task 24): стадия-2 лаунчера (первый символ или ↑↓).
+    // Нужно shell.qml для высоты окна слота B (dock-only ↔ dock+4 строки). Пишет
+    // components/Launcher.qml; при закрытии замораживается (высота переживает fade).
+    property bool launcherStage2: false
+
     function slotOf(panelId) {
         const s = root.panelSlots[panelId]
         return s === undefined ? null : s

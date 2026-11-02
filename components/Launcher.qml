@@ -1,10 +1,15 @@
 // ARCH·UI v2 — components/Launcher.qml (SPEC §4, DESIGN §4 «launcher»)
 // Лаунчер приложений (слот B, panelId "launcher", оверлей на всё окно слота —
-// kit/Panel.overlay). Две стадии:
-//   1 — dock 504×48 у нижней кромки слота (Kit.Field, placeholder «run…», каретка 9×2);
-//   2 — список 504×372 растёт вверх от дока (Motion.launcherGrow 260ms, apple) по
-//       первому символу или ↑↓. Строки h34: плитка-инициал 24, имя 11.5, категория
-//       9 dim справа; выбранная — inset-маркер 2px. «no matches» — dim.
+// kit/Panel.overlay). Две стадии (Task 24: окно едет за контентом, пустого
+// стекла над dock нет):
+//   1 — dock Theme.hDock у нижней кромки слота = вся видимая высота окна (Kit.Field,
+//       placeholder «run…», каретка 3×2); список появляется НАД dock, окно НЕ
+//       растянуто заранее (высота синхронизирована в shell.qml через
+//       LayoutState.launcherStage2);
+//   2 — список dock + 4 строки (4×hRowL=140) растёт вверх от дока
+//       (Motion.launcherGrow 260ms, apple) по первому символу или ↑↓.
+//       Строки hRowL: плитка-инициал 24, имя, категория dim справа; выбранная —
+//       inset-маркер 2px. «no matches» — dim. Список показывает до 4 строк.
 // Фильтр — подстрока (case-insensitive) по имени DesktopEntries (noDisplay=false).
 // ↑↓ — циклическая навигация, Enter — вспышка строки + Quickshell.execDetached +
 // закрытие лаунчера. Esc — закрыть. keyboardFocus Exclusive / HyprlandFocusGrab —
@@ -20,8 +25,8 @@ import "layout.js" as Layout
 Item {
     id: root
 
-    readonly property int dockH: 48
-    readonly property int listH: 372
+    readonly property int dockH: Theme.hDock
+    readonly property int listH: rowH * 4
     readonly property int rowH: Theme.hRowL
     readonly property int tileS: 24
 
@@ -138,7 +143,17 @@ Item {
 
     // Эксклюзивный клавиатурный фокус окна (shell.qml) садится в поле лаунчера.
     Component.onCompleted: dock.input.forceActiveFocus()
-    onVisibleChanged: if (visible) dock.input.forceActiveFocus()
+
+    // Task 24: стадия-2 наружу — окно слота B (shell.qml) меняет высоту под контент.
+    function _syncStage() {
+        if (visible && LayoutState.slots.B === "launcher")
+            LayoutState.launcherStage2 = root.stage2
+    }
+    onStage2Changed: root._syncStage()
+    onVisibleChanged: {
+        if (visible) dock.input.forceActiveFocus()
+        root._syncStage()
+    }
 
     // ------------------------------------------------------------------ dock
     Kit.Field {
@@ -148,7 +163,7 @@ Item {
         anchors.bottom: parent.bottom
         height: root.dockH
         placeholder: "run…"
-        caretW: 9
+        // caret: узкая засечка по умолчанию kit/Field (3×2) — 9×2 накладывалась на глиф
         fontPx: Theme.fs12
 
         onTextEdited: (t) => root.query = t

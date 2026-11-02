@@ -23,9 +23,13 @@ Item {
     readonly property bool nameOnly: SysMon.gpuInfo === "name-only"   // intel iGPU
     readonly property int sparkH: 14          // proto: спарклайн 14px (ANALYSIS 5.3)
     readonly property int bodyW: parent !== null ? parent.width : 472  // ширина body (Loader)
+    // Ячейка метрики — Theme-производная (Task 24; было фикс 228×92): 2×f(228)+16
+    // встаёт в body 493, высота f(96) вмещает label fs9 + значение fs15 + подпись.
+    readonly property int cellW: Theme.f(228)
+    readonly property int cellH: Theme.f(96)
 
     // ---------------------------------------------------------------- метрики
-    // Ячейка 228×92: raise, pad 10/12, gap 6 (ANALYSIS 5.3 .metric)
+    // Ячейка cellW×cellH: raise, pad 10/12, gap 6 (ANALYSIS 5.3 .metric)
     component Metric: Rectangle {
         id: cell
 
@@ -37,8 +41,8 @@ Item {
         property real barValue: 0             // 0..1
         property bool spark: false            // спарклайн (только cpu)
 
-        width: 228
-        height: 92
+        width: root.cellW
+        height: root.cellH
         color: Theme.raise
         border.width: 0
 
@@ -51,7 +55,7 @@ Item {
 
             Item {                             // LABEL 9 caps dim
                 width: parent.width
-                height: 10
+                height: Theme.f(13)
                 Text {
                     text: cell.label
                     color: Theme.dim
@@ -64,7 +68,7 @@ Item {
             Item {                             // значение 15 + юнит 9
                 id: valRow
                 width: parent.width
-                height: 18
+                height: Theme.f(22)
                 Text {
                     id: valText
                     anchors.left: parent.left
@@ -109,10 +113,10 @@ Item {
             anchors.rightMargin: 12
             // valRow не родитель и не сиблинг (он в Column) — anchors на него дают
             // WARN «not a parent or sibling». Позиция детерминирована вёрсткой
-            // Column: margin 10 + label 10 + spacing 6 + (18−14)/2.
+            // Column: margin 10 + label f(13) + spacing 6 + (valRow f(22) − spark 14)/2.
             anchors.top: parent.top
-            anchors.topMargin: 28
-            width: 70                          // 12 × (4 + 2) − 2
+            anchors.topMargin: 10 + Theme.f(13) + 6 + Math.round((Theme.f(22) - root.sparkH) / 2)
+            width: Theme.f(70)                 // 12 × (4 + 2) − 2
             height: root.sparkH
 
             readonly property int shown: 12
@@ -152,7 +156,7 @@ Item {
         property string label: ""
         property string value: ""
         property string meta: ""
-        property int metaW: 88
+        property int metaW: Theme.wLabel      // Task 24: токен вместо фикс 88
         property bool ghost: false            // нет железа/выключено — dim
 
         width: parent.width                    // Task 17: одноколоночный HARDWARE — во всю ширину
@@ -169,7 +173,7 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 20            // иконка 12 + gap 8
             anchors.verticalCenter: parent.verticalCenter
-            width: 64                         // метка-колонка 84 = 20 + 64
+            width: Theme.wLabel - 20         // метка-колонка wLabel = 20 + (wLabel−20)
             text: hw.label
             color: Theme.dim
             font.family: Theme.font
@@ -280,7 +284,7 @@ Item {
                     label: "network"
                     value: SysMon.netUp ? (SysMon.netIp.length > 0 ? SysMon.netIp : "up") : "off"
                     meta: SysMon.netUp ? (SysMon.netWifi ? "wifi" : "eth") : "down"
-                    metaW: 52
+                    metaW: Theme.f(52)
                     ghost: !SysMon.netUp
                 }
                 HwRow {

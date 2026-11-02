@@ -45,9 +45,14 @@ Singleton {
     // Источник scale — монитор Hyprland того же экрана, к которому аттачатся окна
     // (Quickshell.screens[0].scale в этой сборке не заполнен — undefined),
     // фолбэк — designScale (px=1, базовая сетка).
+    // Task 24 фикс: monitors.length не имеет change-notify — модель Hyprland
+    // заполняется асинхронно ПОСЛЕ старта QML, биндинг замирал на px=1. Читаем
+    // .values (список с notify) — px доедает до 1.04, когда monitors придут.
     readonly property real designScale: 1.2
-    readonly property real px: Hyprland.monitors.length > 0 && Hyprland.monitors[0].scale > 0
-                              ? Hyprland.monitors[0].scale / designScale : 1
+    readonly property real px: {
+        const ms = Hyprland.monitors.values
+        return ms.length > 0 && ms[0].scale > 0 ? ms[0].scale / designScale : 1
+    }
     function f(base: real): int { return Math.round(base * root.px) }
 
     // --- Отступы: фактические значения макета (SPEC §3: 6/8/10/11/12/13/18) ---
@@ -60,11 +65,15 @@ Singleton {
     readonly property int s18: 18
 
     // --- Шрифты: pixelSize для font.* (базовые значения × px) ---
-    readonly property int fs8: f(8)
-    readonly property int fs9: f(9)
-    readonly property int fs10: f(10)
-    readonly property int fs11: f(11)
-    readonly property int fs12: f(12)
+    // Task 24 (+25% контента, слоты A/C симметрично): эталон — терминал юзера 15px.
+    // База fs-токенов поднята на один шаг (fs15/fs18 — уже ≈ эталон, не тронуты;
+    // fs13 — только Placeholder, оставлен). Эффективные при px≈1.04:
+    //   fs8=10 · fs9=11 · fs10=14 · fs11=15 · fs12=16 · fs15=16 · fs18=19
+    readonly property int fs8: f(10)
+    readonly property int fs9: f(11)
+    readonly property int fs10: f(13)
+    readonly property int fs11: f(14)
+    readonly property int fs12: f(15)
     readonly property int fs13: f(13)
     readonly property int fs15: f(15)
     readonly property int fs18: f(18)
@@ -77,11 +86,25 @@ Singleton {
     readonly property int hRowS: f(28)   // компактные ряды (kit/Row, строки SysInfo hw)
     readonly property int hChip: f(22)   // чипы/мини-плитки
 
+    // --- Слот B: компактное окно (Task 24) ---
+    // Все размеры — композиция токенов (никаких отдельных кусков вне Theme):
+    //   лаунчер ст.1  = hDock (dock только)
+    //   лаунчер ст.2  = hSlotB = dock + 4 строки списка (hRowL)
+    //   logout        = hHead + padTop 12 + 2×hTile + s6 + padBottom 16 + hFoot
+    //                   (паддинги 12/16 — литералы body kit/Panel.qml)
+    readonly property int hDock: f(48)                       // dock лаунчера
+    readonly property int hTile: f(64)                       // плитки logout (было 56 фикс)
+    readonly property int hSlotB: hDock + 4 * hRowL           // 50+4×35 = 190
+
+    // --- Бар: поля от краёв (#bar padding 0 18, было 18 фикс) ---
+    readonly property int barPad: f(18)
+
     // --- Отступы (дополнение к 6/8/10…): паддинги панелей/чипов ---
     readonly property int s16: 16
 
     // --- Ключевые ширины (базовая × px: шрифт метки растёт вместе с колонкой) ---
     readonly property int wLabel: f(84)  // метка-колонка label caps (Docker/SysInfo)
+    readonly property int wBar: f(360)  // окно статус-бара (Task 24: было 500)
 
     // --- Радиусы ---
     readonly property int r2: 2

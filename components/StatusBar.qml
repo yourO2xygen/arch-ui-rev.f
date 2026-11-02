@@ -1,6 +1,7 @@
 // ARCH·UI v2 — components/StatusBar.qml (SPEC §2/§7, ANALYSIS §5.1, DESIGN-RESEARCH §3.9)
-// Контент транзиентного бара 500×44: слева часы DSEG7 · по центру воркспейсы ·
-// справа раскладка (пункт №8: без даты/дня недели в баре).
+// Контент транзиентного бара (окно Theme.wBar 360·px — Task 24, было 500): слева
+// часы DSEG7 fs15 Bold · по центру воркспейсы · справа раскладка JBM fs15 Bold
+// на общем baseline с часами (симметрия, Task 24; раньше fs11 Medium).
 //
 // Данные: SystemClock (тик 1s) + Hyprland.workspaces / focusedMonitor.activeWorkspace +
 // rawEvent("activelayout"). Клик воркспейса → HyprlandWorkspace.activate()
@@ -26,7 +27,8 @@ Item {
     id: root
 
     // --------------------------------------------------------------- геометрия
-    readonly property int padH: 18   // #bar{padding:0 18} — поля, если бар станет автоширины
+    // Task 24: поля — Theme-производная (было 18 фикс); ширина окна — Theme.wBar (360·px)
+    readonly property int padH: Theme.barPad
 
     // ------------------------------------------------------------------- время
     SystemClock { id: clock; precision: SystemClock.Seconds }
@@ -367,15 +369,21 @@ Item {
         }
 
         // ------------------------------------------- справа: раскладка (#bar .bl)
+        // Task 24 («симметрия язык/часы»): JBM fs15 Bold — равноценна DSEG7-часам
+        // слева, зеркальные отступы от края (padH), общий baseline с часами.
+        // DSEG7-глифы сидят выше шрифтового baseline (его цифры — капс-высота),
+        // поэтому микрокоррекция −3px поднята пиксельным замером: вертикальные
+        // центры глифов совпадают (язык 21–36, часы 19–38 физ. в баре 58px).
         Text {
             anchors.right: parent.right
             anchors.rightMargin: root.padH
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.baseline: timeText.baseline
+            anchors.baselineOffset: -3
             text: root.layout
             color: Theme.txt
             font.family: Theme.font
-            font.pixelSize: Theme.fs11
-            font.weight: Font.Medium
+            font.pixelSize: Theme.fs15
+            font.weight: Font.Bold
         }
     }
     }   // barLayer

@@ -1,6 +1,8 @@
 // ARCH·UI v2 — components/Logout.qml (SPEC §4, DESIGN §4 «logout»)
-// Сессия (слот B, panelId "logout"). 5 плиток h56 равной ширины: lock / sleep / exit /
-// reboot / power. Ховер — raise; power — ховер ИНВЕРСИЕЙ (максимум серьёзности).
+// Сессия (слот B, panelId "logout"), компактная композиция Task 24: окно слота B
+// стало маленьким (~241), поэтому плитки — квадраты Theme.hTile (~67×67·px) с fs11-
+// подписями, 3+2 двумя рядами по центру body (без пустых 100-300px): lock / sleep /
+// exit / reboot / power. Ховер — raise; power — ховер ИНВЕРСИЕЙ (максимум серьёзности).
 // Клик:
 //   lock    → /usr/bin/loginctl lock-session
 //   sleep   → /usr/bin/systemctl suspend
@@ -19,8 +21,8 @@ import "../kit" as Kit
 Item {
     id: root
 
-    readonly property int tileH: 56
-    readonly property int tileGap: 6
+    readonly property int tileH: Theme.hTile
+    readonly property int tileGap: Theme.s6
 
     // Активная команда (для тестов: "what-command-would-run"); "" — ничего не ждёт
     readonly property string pendingCommand: _pending.length > 0 ? _commandFor(_pending) : ""
@@ -73,59 +75,74 @@ Item {
     HaltOverlay { id: halt }
 
     // --------------------------------------------------------------- плитки
-    Row {
-        id: tiles
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
+    // 3+2 по центру: квадраты Theme.hTile, Row'ы центрированы по body (высота
+    // контента 2×hTile+gap = 140 — та же цифра, что окно слота B в shell.qml).
+    Column {
+        anchors.centerIn: parent
         spacing: root.tileGap
 
         Repeater {
+            // два ряда: [lock sleep exit] и [reboot power]
             model: [
-                { id: "lock",   icon: "lock",     label: "LOCK" },
-                { id: "sleep",  icon: "moon",     label: "SLEEP" },
-                { id: "exit",   icon: "log-out",  label: "EXIT" },
-                { id: "reboot", icon: "rotate-cw", label: "REBOOT" },
-                { id: "power",  icon: "power",    label: "POWER" }
+                [
+                    { id: "lock",   icon: "lock",     label: "LOCK" },
+                    { id: "sleep",  icon: "moon",     label: "SLEEP" },
+                    { id: "exit",   icon: "log-out",  label: "EXIT" }
+                ],
+                [
+                    { id: "reboot", icon: "rotate-cw", label: "REBOOT" },
+                    { id: "power",  icon: "power",    label: "POWER" }
+                ]
             ]
 
-            delegate: Rectangle {
-                id: tile
+            delegate: Row {
+                id: tiles
                 required property var modelData
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: root.tileGap
 
-                width: (tiles.width - 4 * root.tileGap) / 5
-                height: root.tileH
-                border.width: 0
+                Repeater {
+                    model: tiles.modelData
 
-                // power — ховер-инверсия, остальные — raise → raise2
-                readonly property bool inverted: tile.modelData.id === "power" && hover.hovered
-                color: inverted ? Theme.invBg
-                     : hover.hovered ? Theme.raise2
-                     : Theme.raise
+                    delegate: Rectangle {
+                        id: tile
+                        required property var modelData
 
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 5
+                        width: root.tileH
+                        height: root.tileH
+                        border.width: 0
 
-                    Kit.Icon {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        name: tile.modelData.icon
-                        size: 14
-                        color: tile.inverted ? Theme.invFg : Theme.txt2
-                    }
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: tile.modelData.label
-                        color: tile.inverted ? Theme.invFg : Theme.txt2
-                        font.family: Theme.font
-                        font.pixelSize: Theme.fs9
-                        font.weight: Font.Medium
-                        font.letterSpacing: 1
+                        // power — ховер-инверсия, остальные — raise → raise2
+                        readonly property bool inverted: tile.modelData.id === "power" && hover.hovered
+                        color: inverted ? Theme.invBg
+                             : hover.hovered ? Theme.raise2
+                             : Theme.raise
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 5
+
+                            Kit.Icon {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                name: tile.modelData.icon
+                                size: 16
+                                color: tile.inverted ? Theme.invFg : Theme.txt2
+                            }
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: tile.modelData.label
+                                color: tile.inverted ? Theme.invFg : Theme.txt2
+                                font.family: Theme.font
+                                font.pixelSize: Theme.fs11
+                                font.weight: Font.Medium
+                                font.letterSpacing: 1
+                            }
+                        }
+
+                        HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: root._activate(tile.modelData.id) }
                     }
                 }
-
-                HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
-                TapHandler { onTapped: root._activate(tile.modelData.id) }
             }
         }
     }
