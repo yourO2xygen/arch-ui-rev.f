@@ -63,6 +63,7 @@ qs -c shell --no-duplicate --daemonize
 ```
 qs -c shell ipc call archui toggle <panelId>   # panelId: docker|taskmgr|launcher|logout|sysinfo|chat|aimgr|notifcenter
 qs -c shell ipc call archui toggleBar          # статус-бар (транзиент 2.8s)
+qs -c shell ipc call archui osd brightness     # ОСД яркости в статус-баре (громкость ловится Pipewire сам)
 qs -c shell ipc call archui toggleCalendar     # показать/скрыть календарь
 qs -c shell ipc call archui dndToggle          # DND on/off
 qs -c shell ipc call archui dnd <true|false>   # DND явно

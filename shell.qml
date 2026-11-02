@@ -773,6 +773,8 @@ ShellRoot {
 
         function toggle(panelId: string): void { LayoutState.toggle(panelId) }
         function toggleBar(): void { LayoutState.toggleBar() }
+        // ОСД статус-бара (Task 19): показать бар в режиме volume/brightness
+        function osd(kind: string): void { statusBar.showOsd(kind) }
         function dismissToasts(): void { NotifStore.dismissAll() }
         function dnd(on: bool): void { LayoutState.setDnd(on) }
         // Хоткеи SPEC §12: тумблеры (бинд не знает текущего состояния)

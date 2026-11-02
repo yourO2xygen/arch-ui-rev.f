@@ -50,6 +50,8 @@ Singleton {
     readonly property int dndToggle: 160
     readonly property int launcherGrow: 260
     readonly property int barTimeout: 2800
+    readonly property int osdSwap: 130            // статус-бар: кросс-fade bar ↔ ОСД (громкость/яркость)
+    readonly property int osdPulse: 130           // ОСД: полупиг табло при повторном триггере того же режима
     readonly property int caretBlink: 1070
     readonly property int caretPause: 900
     readonly property int sparkIn: 200           // sysinfo: fade-in столбца спарклайна (ANALYSIS 5.3)

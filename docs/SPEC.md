@@ -145,7 +145,7 @@ Logout-команды: lock → `loginctl lock-session`, sleep → `systemctl su
 ## 7. Daemon, хоткеи, IPC
 
 - Запуск: `qs -c shell --no-duplicate --daemonize` из hyprland.lua (как раньше). Systemd-юнит не возвращаем — один источник старта.
-- **Лаунчер — GlobalShortcut** (`Quickshell.Hyprland`, appid `archui`, name `launcher`; bind `bind = SUPER, R, global, archui:launcher`) — нулевая латентность, без форка qs. Остальное — IPC (`IpcHandler` `archui`): `toggle(panelId)`, `toggleBar()`, `dismissToasts()`, `dnd(bool)`; в hyprland — `bind = ..., exec, qs -c shell ipc call archui toggle docker`. Типы аргументов обязательны.
+- **Лаунчер — GlobalShortcut** (`Quickshell.Hyprland`, appid `archui`, name `launcher`; bind `bind = SUPER, R, global, archui:launcher`) — нулевая латентность, без форка qs. Остальное — IPC (`IpcHandler` `archui`): `toggle(panelId)`, `toggleBar()`, `dismissToasts()`, `dnd(bool)`, `osd(kind)`; в hyprland — `bind = ..., exec, qs -c shell ipc call archui toggle docker`. Типы аргументов обязательны.
 - **Абсолютные пути** для всех Process: pi → `/home/gitgut/.pi/agent/bin/pi`, docker → `/usr/bin/docker`, ps/kill/systemctl — `/usr/bin/...` (PATH демона ненадёжен).
 - Авторелоад включён (состояние переживается по §1).
 
