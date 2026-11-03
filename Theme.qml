@@ -81,7 +81,7 @@ Singleton {
     // --- Структурные высоты: head/foot панелей, ряды, чипы (базовые × px) ---
     readonly property int hHead: f(40)   // head-кит слота (kit/Panel)
     readonly property int hFoot: f(30)   // foot-кит слота (kit/Panel)
-    readonly property int hRow: f(30)    // панельные ряды (TaskMgr/AgentMgr/AgentChat/Docker info)
+    readonly property int hRow: f(30)    // панельные ряды (TaskMgr/Docker info)
     readonly property int hRowL: f(34)   // крупные ряды (Launcher)
     readonly property int hRowS: f(28)   // компактные ряды (kit/Row, строки SysInfo hw)
     readonly property int hChip: f(22)   // чипы/мини-плитки

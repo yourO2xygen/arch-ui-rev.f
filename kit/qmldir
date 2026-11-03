@@ -5,7 +5,6 @@ Panel 1.0 Panel.qml
 GlitchFX 1.0 GlitchFX.qml
 Row 1.0 Row.qml
 Chip 1.0 Chip.qml
-Btn 1.0 Btn.qml
 SegBar 1.0 SegBar.qml
 Dot 1.0 Dot.qml
 Field 1.0 Field.qml

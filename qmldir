@@ -15,6 +15,3 @@ singleton DockerMon 1.0 services/DockerMon.qml
 Docker 1.0 components/Docker.qml
 Launcher 1.0 components/Launcher.qml
 Logout 1.0 components/Logout.qml
-singleton AgentBridge 1.0 services/AgentBridge.qml
-AgentChat 1.0 components/AgentChat.qml
-AgentMgr 1.0 components/AgentMgr.qml

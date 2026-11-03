@@ -16,7 +16,7 @@ Singleton {
     readonly property var panelSlots: ({
         docker: "A", taskmgr: "A", sysinfo: "A",
         launcher: "B", logout: "B",
-        chat: "C", aimgr: "C", notifcenter: "C"
+        notifcenter: "C"
     })
 
     // Персист: "" (слот закрыт) / panelId; бар и DND — bool.

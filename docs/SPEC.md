@@ -7,12 +7,12 @@
 
 ## 0. Требования пользователя (дано)
 
-1. 3 колонки (лево/центр/право), симметрия. Вверху только: calendar (лево) / status bar (центр) / тосты уведомлений (право). Внизу: taskmgr+docker — лево; launcher+logout+sysinfo — центр; agent chat+agent manager+notif center — право.
+1. 3 колонки (лево/центр/право), симметрия. Вверху только: calendar (лево) / status bar (центр) / тосты уведомлений (право). Внизу: taskmgr+docker — лево; launcher+logout+sysinfo — центр; agent chat+agent manager+notif center — право. **(агент-чат/менеджер удалены из шелла в Task 27 — слот C теперь notifcenter only)**
 2. Панели колонки занимают **одинаковый** слот 504×544; вызов второй **заменяет** первую на месте.
 3. Daemon-режим (`qs -c shell -n -d`).
 4. Монохромный киберпанк-глич при появлении.
 5. Стекло-эффект — опция, после ядра, с критерием смерти (§9).
-6. Бекенд чата — pi `--mode rpc`.
+6. Бекенд чата — pi `--mode rpc`. **(удалено в Task 27)**
 7. Полный notification daemon.
 8. Токены/кривые — в одном месте (Theme.qml / Motion.qml).
 9. Сабагенты; каждое техрешение → критика → правка.
@@ -31,17 +31,17 @@
 │   ├── Panel.qml          # head/body/foot + хореография (420/140/220) + ghost-эхо + глич + mask
 │   ├── Icon.qml           # Lucide path → Shape/ShapePath (retained), stroke-правило
 │   ├── Row.qml            # строка: hover raise, selected inset, dot-слот
-│   ├── SegBar.qml  Dot.qml  Chip.qml  Btn.qml  Field.qml  Section.qml
+│   ├── SegBar.qml  Dot.qml  Chip.qml  Field.qml  Section.qml
 │   └── GlitchFX.qml       # ShaderEffect монохромного глича
-├── components/            # StatusBar Calendar Toasts Launcher Logout SysInfo TaskMgr Docker AgentChat AgentMgr NotifCenter
-├── services/              # LayoutState NotifStore AgentBridge SysMon ProcMon DockerMon (Singleton)
+├── components/            # StatusBar Calendar Toasts Launcher Logout SysInfo TaskMgr Docker NotifCenter
+├── services/              # LayoutState NotifStore SysMon ProcMon DockerMon (Singleton)
 ├── assets/{fonts,icons}/  # DSEG7Classic-Bold.ttf, icons.json (84 lucide-набора, 15KB)
 └── docs/
 ```
 
 Зависимости: `components → kit → Theme/Motion`; `components → services`; services не импортируют UI. Синглтоны через `pragma Singleton` + `qmldir`.
 
-**Состояние и reload**: синглтоны пересоздаются при авторелоаде qs — состояние, которое должно переживать reload, держится ТОЛЬКО в `PersistentProperties` (с `reloadableId`) внутри синглтона либо на диске (FileView/JsonAdapter). Обязательный минимум: DND (NotifStore), открытые слоты (LayoutState), история уведомлений (файл), поколение чата.
+**Состояние и reload**: синглтоны пересоздаются при авторелоаде qs — состояние, которое должно переживать reload, держится ТОЛЬКО в `PersistentProperties` (с `reloadableId`) внутри синглтона либо на диске (FileView/JsonAdapter). Обязательный минимум: DND (NotifStore), открытые слоты (LayoutState), история уведомлений (файл).
 
 ---
 
@@ -66,7 +66,7 @@
 - слот закрыт / бар скрыт / тостов нет → **пустая маска** (окно прозрачно для ввода);
 - панель открыта → прямоугольник панели; маска переключается в той же хореографии, что и visible. Никогда не полагаемся на ввод по геометрии.
 
-**KeyboardFocus** (WlrLayershell): launcher — `Exclusive` при открытии, чат — `OnDemand`, всё остальное — `None`. При закрытии — назад в `None`. Клик мимо панели → закрытие по `HyprlandFocusGrab` (для лаунчера) / потеря OnDemand-фокуса (чат остаётся открытым).
+**KeyboardFocus** (WlrLayershell): launcher — `Exclusive` при открытии, всё остальное — `OnDemand`. При закрытии — назад в `OnDemand`. Клик мимо панели → закрытие по `HyprlandFocusGrab` (для текстовых панелей).
 
 **Slot manager** (`LayoutState`, Singleton): `{A,B,C} → panelId|null`, персист в PersistentProperties. `toggle(panelId)`:
 - слот показывает `panelId` → закрыть (зеркальная хореография);
@@ -100,15 +100,13 @@
 | SysInfo | метрики 2×2, ячейка 228×92 (значение 15 + юнит, подпись, полоса, спарклайн у cpu); HARDWARE 2×3 строки h28 | нет |
 | TaskMgr | фильтр 34 + чип сортировки; таблица: строки h30 (pid/name/cpu/mem/user/kill), видно ~13 | таблица |
 | Docker | слева список 184px (dot/имя/образ/порт), справа табы Logs/Resources/Ports + тулбар h26 | обе части |
-| AgentChat | лента пузырей, поле h40; карточки команд `▸ cmd` и agent-question | лента |
-| AgentMgr | табы; RUNNING строки h30; MODELS радио h28; кнопки New/Kill h26 | секции |
 | NotifCenter | TODAY/YESTERDAY строки h52 (плитка 32 + тексты), DND/Clear в head | история |
 | Logout | 5 плиток h56 × 96w (ряд), user·uptime секция, крупная мета | нет |
 | Launcher | dock h48 → список 504×372: строки h34 (инициал 24/имя/категория) | список |
 
 Каждый компонентный сабагент получает этот скелет + ANALYSIS.md и уточняет внутренние отступы по фактическим значениям макета.
 
-Данные: StatusBar — SystemClock + `Hyprland.workspaces`/`focusedMonitor` + раскладка (RawEvent); Calendar — JS Date, **ISO-8601 неделя** (макет считал не по ISO — исправлено); Launcher — `DesktopEntries` + `execDetached`; Logout — systemctl/hyprctl; SysInfo — SysMon; TaskMgr — ProcMon; Docker — DockerMon; чат/менеджер — AgentBridge; тосты/центр — NotifStore.
+Данные: StatusBar — SystemClock + `Hyprland.workspaces`/`focusedMonitor` + раскладка (RawEvent); Calendar — JS Date, **ISO-8601 неделя** (макет считал не по ISO — исправлено); Launcher — `DesktopEntries` + `execDetached`; Logout — systemctl/hyprctl; SysInfo — SysMon; TaskMgr — ProcMon; Docker — DockerMon; тосты/центр — NotifStore.
 
 Logout-команды: lock → `loginctl lock-session`, sleep → `systemctl suspend`, exit → `hyprctl dispatch exit` (**сразу, без фейда — композитор умрёт**), reboot/poweroff → команда сразу + короткий fade-оверлей (экран всё равно уйдёт; оверлей только на случай медленного выключения).
 
@@ -130,6 +128,10 @@ Logout-команды: lock → `loginctl lock-session`, sleep → `systemctl su
 
 ## 6. Чат/менеджер агента — pi RPC
 
+**(Секция помечена удалённой в Task 27: панели чата и менеджера агентов убраны
+из шелла вместе с AgentBridge и docs/agent-chat.md, слот C остался
+notifcenter only; git-история сохраняет реализацию. Ниже — исторический текст.)**
+
 `AgentBridge` ↔ подпроцесс **`pi --mode rpc`** (JSONL over stdio). Детали — research/PI-BACKEND.md.
 
 - **Ленивый старт**: процесс запускается при первом открытии колонки C (cold start 1–2с один раз), дальше живёт. Не гоняем 150–300MB Node-процесса неделями для неиспользуемой панели.
@@ -146,7 +148,7 @@ Logout-команды: lock → `loginctl lock-session`, sleep → `systemctl su
 
 - Запуск: `qs -c shell --no-duplicate --daemonize` из hyprland.lua (как раньше). Systemd-юнит не возвращаем — один источник старта.
 - **Лаунчер — GlobalShortcut** (`Quickshell.Hyprland`, appid `archui`, name `launcher`; bind `bind = SUPER, R, global, archui:launcher`) — нулевая латентность, без форка qs. Остальное — IPC (`IpcHandler` `archui`): `toggle(panelId)`, `toggleBar()`, `dismissToasts()`, `dnd(bool)`, `osd(kind)`; в hyprland — `bind = ..., exec, qs -c shell ipc call archui toggle docker`. Типы аргументов обязательны.
-- **Абсолютные пути** для всех Process: pi → `/home/gitgut/.pi/agent/bin/pi`, docker → `/usr/bin/docker`, ps/kill/systemctl — `/usr/bin/...` (PATH демона ненадёжен).
+- **Абсолютные пути** для всех Process: docker → `/usr/bin/docker`, ps/kill/systemctl — `/usr/bin/...` (PATH демона ненадёжен).
 - Авторелоад включён (состояние переживается по §1).
 
 ---
@@ -173,7 +175,7 @@ Logout-команды: lock → `loginctl lock-session`, sleep → `systemctl su
 1. **Каркас**: Theme/Motion/qmldir/kit (Icon, Panel с масками/фокусом), LayoutState, 3 окна колонок + окно calendar/бара/тостов с масками, IPC+GlobalShortcut, хоткеи, демон. Критерий: панели-пустышки открываются/заменяются/закрываются, ввод не глотается на пустых слотах.
 2. **Лента+уведомления**: StatusBar, Calendar, Toasts, NotifStore+NotifCenter (полный daemon).
 3. **Системные панели**: SysInfo, TaskMgr, Docker, Launcher, Logout.
-4. **Агент**: AgentBridge, AgentChat, AgentMgr.
+4. **Агент**: AgentBridge, AgentChat, AgentMgr. **(этап откачен в Task 27 — панели удалены из шелла)**
 5. **Глич-полировка** по карте состояний.
 6. **Стекло** (опц.), финальные docs, hyprland.lua.
 
@@ -183,7 +185,7 @@ Logout-команды: lock → `loginctl lock-session`, sleep → `systemctl su
 
 ## 11. Документация
 
-`docs/README.md` (главный) → `design-system.md`, `motion.md`, `layout.md` (окна/маски/IPC/хоткеи), `notifications.md`, `agent-chat.md`, `services.md`, `research/*`. Правило: изменение поведения → сначала doc.
+`docs/README.md` (главный) → `design-system.md`, `motion.md`, `layout.md` (окна/маски/IPC/хоткеи), `notifications.md`, `services.md`, `research/*`. Правило: изменение поведения → сначала doc.
 
 ---
 
@@ -194,7 +196,6 @@ Logout-команды: lock → `loginctl lock-session`, sleep → `systemctl su
 | SUPER+R | launcher (GlobalShortcut) |
 | SUPER+S / D / T | sysinfo / docker / taskmgr |
 | SUPER+C / L | calendar / logout |
-| SUPER+A / SUPER+SHIFT+A | agent chat / agent mgr |
 | SUPER+N / SUPER+SHIFT+N | notif center / DND toggle |
 | SUPER+SHIFT+S | status bar |
 
@@ -204,9 +205,9 @@ Logout-команды: lock → `loginctl lock-session`, sleep → `systemctl su
 2. Wallpaper: оригинал из спеки отсутствует; что ставить? (не трогаю)
 3. Чат: одна сессия in-memory + New thread? (да)
 4. Права инструментов pi: confirm-диалоги в UI? (нет, только статус)
-5. Модель чата по умолчанию? (дефолт pi)
+5. Модель чата по умолчанию? **(закрыто в Task 27 — вопрос eliza/zai стал moot вместе с удалением агент-чата)**
 6. Звуки/inline-reply уведомлений? (нет)
-7. Фоновые сабагенты pi в AgentMgr? (нет, v1)
+7. Фоновые сабагенты pi в AgentMgr? **(moot, Task 27)**
 8. Critical строго не истекает? (да)
 9. Бар: оставить транзиент (по макету) или добавить постоянные мини-часы? (транзиент, по макету)
 10. Calendar: ок ли idle-dim + сворачивание до чипа? (сделано мягко)

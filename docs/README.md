@@ -1,7 +1,7 @@
 # ARCH·UI — рабочий стол на Quickshell
 
 Монохромный киберпанк-шелл для Hyprland: три слот-колонки панелей, транзиентный
-статус-бар, календарь, полный notification daemon и агент-чат на `pi --mode rpc`.
+статус-бар, календарь и полный notification daemon.
 
 Полная спека: [SPEC.md](SPEC.md) (поведение, решения, открытые вопросы).
 Дизайн-исследования: [../research/](../research/).
@@ -54,7 +54,6 @@ qs -c shell --no-duplicate --daemonize
 | [design-system.md](design-system.md) | Токены Theme, примитивы kit, шейдеры глича |
 | [motion.md](motion.md) | Все токены движения, кривая apple, семантика глича |
 | [notifications.md](notifications.md) | Полный цикл уведомлений, DND, спам-гейт, история, маска dunst |
-| [agent-chat.md](agent-chat.md) | pi RPC-мост, протокол, жизненный цикл процесса |
 | [services.md](services.md) | Каждый синглтон: что читает, какие процессы держит, когда активен |
 
 Правило (SPEC §11): изменение поведения → сначала doc.
@@ -64,7 +63,7 @@ qs -c shell --no-duplicate --daemonize
 Таргет `archui`:
 
 ```
-qs -c shell ipc call archui toggle <panelId>   # panelId: docker|taskmgr|launcher|logout|sysinfo|chat|aimgr|notifcenter
+qs -c shell ipc call archui toggle <panelId>   # panelId: docker|taskmgr|launcher|logout|sysinfo|notifcenter
 qs -c shell ipc call archui toggleBar          # статус-бар (транзиент 2.8s)
 qs -c shell ipc call archui osd brightness     # ОСД яркости в статус-баре (громкость ловится Pipewire сам)
 qs -c shell ipc call archui toggleCalendar     # показать/скрыть календарь
@@ -86,13 +85,13 @@ qs -c shell ipc call archui dismissToasts      # убрать все тосты
 | SUPER+R | лаунчер (GlobalShortcut) |
 | SUPER+Z / SUPER+SHIFT+A / SUPER+A | sysinfo / docker / taskmgr (слот A) |
 | SUPER+C / L | показать/скрыть календарь / logout (слот B) |
-| SUPER+D / SUPER+SHIFT+D | чат / менеджер агента (слот C) |
 | SUPER+N / SUPER+SHIFT+N | центр уведомлений / DND toggle |
 | SUPER+X | статус-бар |
 | SUPER+SHIFT+S | скриншот-регион |
 
 Файл: `~/.config/hypr/hyprland.lua` (вне репо). Спец-воркспейс «magic» остаётся
-закомментированным в файле; свободные клавиши после Task 12: SUPER+S, SUPER+T.
+закомментированным в файле; свободные клавиши после Task 12: SUPER+S, SUPER+T;
+после Task 27 (удаление агент-чата и менеджера агентов): SUPER+D, SUPER+SHIFT+D.
 
 ## Что не проверено автоматом (за пользователем)
 
@@ -101,7 +100,7 @@ movecursor` сломан lua-диспетчером — hyprwm/Hyprland#14675), 
 стоит проверить:
 
 - клики по kill-кнопке TaskMgr, строкам/табам/кнопкам Docker, строкам лаунчера;
-- клик-фокус полей (фильтр TaskMgr, поле чата), клавиатура в лаунчере/чате;
+- клик-фокус полей (фильтр TaskMgr), клавиатура в лаунчере;
 - hover-эффекты (power-плитки Logout, строки списков);
 - Esc в лаунчере, клик мимо панели (закрытие лаунчера через focus-grab);
 - тосты: hover-пауза таймера, клик «+N critical».
@@ -115,6 +114,5 @@ movecursor` сломан lua-диспетчером — hyprwm/Hyprland#14675), 
 
 ## Открытые вопросы (SPEC §13)
 
-См. конец [SPEC.md](SPEC.md). Ключевой живой: дефолтный провайдер чата —
-`settings.json` pi говорит eliza/glm-5-3, но endpoint eliza недоступен
-(подробности в [agent-chat.md](agent-chat.md)).
+См. конец [SPEC.md](SPEC.md). Вопрос дефолтного провайдера чата (eliza/zai)
+закрыт вместе с удалением агент-чата (Task 27) — стал moot.

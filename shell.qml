@@ -454,8 +454,8 @@ ShellRoot {
     // hardcode, HyprlandFocusGrab qs — только active/windows).
     //
     // Решение юзера (F1, 2026-11-03): dismiss-grab держат ТОЛЬКО панели с
-    // текстовым вводом (taskmgr — фильтр, chat — поле ввода; клавиатура им по
-    // назначению). Пассивные панели (sysinfo/docker/notifcenter/aimgr/logout/
+    // текстовым вводом (taskmgr — фильтр; клавиатура ему по назначению).
+    // Пассивные панели (sysinfo/docker/notifcenter/logout/
     // calendar/bar) grab не активируют ВООБЩЕ → их открытие не трогает
     // клавиатуру тайла. Плата (осознанное решение юзера): клик мимо пассивной
     // панели её больше не закрывает — закрытие повторным биндом (toggle
@@ -473,9 +473,7 @@ ShellRoot {
     // выше) в active-условие не входит — см. разбор F1 выше.
     HyprlandFocusGrab {
         id: dismissGrab
-        active: LayoutState.slots.B !== "launcher"
-                && ((colA.open && LayoutState.slots.A === "taskmgr")
-                    || (colC.open && LayoutState.slots.C === "chat"))
+        active: colA.open && LayoutState.slots.A === "taskmgr"
         windows: [colA, colB, colC, calendar, bar]
         onCleared: {
             if (colA.open || LayoutState.slots.B !== null || colC.open
@@ -491,14 +489,14 @@ ShellRoot {
     }
 
     // --------------------------------------------------------------- СЛОТ C
-    // head/foot слота общие (kit/Panel): контент notifcenter показывается, когда
-    // активен он (задача 8 добавит свои head'ы для chat/aimgr).
+    // head/foot слота общие (kit/Panel): единственная панель слота —
+    // notifcenter, её head и показывается.
     // Дебаг-фолбэк «SLOT C» (head при пустом panelId) убран: слот-окно видно
     // только при открытой панели, надпись лишь моргала в переходах (Task 15).
     Kit.Panel {
         id: colC
         slot: "C"
-        panels: ["chat", "aimgr", "notifcenter"]
+        panels: ["notifcenter"]
         WlrLayershell.namespace: "archui:col-c"
         anchors { left: true; top: true }
         margins.left: root.scrW - root.pad - root.slotW
@@ -508,130 +506,6 @@ ShellRoot {
 
         head: Component {
             Item {
-                // head чата (DESIGN §4 «chat»): бот+CHAT слева; справа чип модели
-                // (инверсия), чип треда, «+» (New thread)
-                Row {
-                    visible: colC.panelId === "chat"
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-
-                    Kit.Icon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: "bot"
-                        size: 13
-                        color: Theme.txt2
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "CHAT"
-                        color: Theme.txt2
-                        font.family: Theme.font
-                        font.pixelSize: Theme.fs11
-                        font.letterSpacing: 1
-                    }
-                }
-
-                Row {
-                    visible: colC.panelId === "chat"
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-
-                    // чип модели (инверсия) — клик открывает aimgr (выбор модели)
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: cModelText.width + 16
-                        height: Theme.hChip
-                        radius: Theme.r2
-                        color: Theme.invBg
-                        border.width: 0
-                        Text {
-                            id: cModelText
-                            anchors.centerIn: parent
-                            text: AgentBridge.currentModel ? AgentBridge.currentModel.name : "—"
-                            color: Theme.invFg
-                            font.family: Theme.font
-                            font.pixelSize: Theme.fs10
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: LayoutState.openIn("C", "aimgr")
-                        }
-                    }
-                    Kit.Chip {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: AgentBridge.generating ? "streaming"
-                            : AgentBridge.dead ? "died"
-                            : AgentBridge.stopped ? "stopped"
-                            : AgentBridge.connected ? "thread · " + AgentBridge.messageCount
-                            : "offline"
-                        onClicked: AgentBridge.ensureStarted()
-                    }
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 22
-                        height: Theme.hChip
-                        radius: Theme.r2
-                        color: cPlusMa.containsMouse ? Theme.raise2 : Theme.raise
-                        border.width: 0
-                        Kit.Icon {
-                            anchors.centerIn: parent
-                            name: "plus"
-                            size: 12
-                            color: Theme.txt2
-                        }
-                        MouseArea {
-                            id: cPlusMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: AgentBridge.newThread()
-                        }
-                    }
-                }
-
-                // head aimgr: AImgr слева, чип contextUsage справа (SPEC §6)
-                Row {
-                    visible: colC.panelId === "aimgr"
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-
-                    Kit.Icon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: "sparkles"
-                        size: 13
-                        color: Theme.txt2
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "AGENT MGR"
-                        color: Theme.txt2
-                        font.family: Theme.font
-                        font.pixelSize: Theme.fs11
-                        font.letterSpacing: 1
-                    }
-                }
-
-                Text {
-                    visible: colC.panelId === "aimgr"
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: AgentBridge.contextUsage && AgentBridge.contextUsage.percent !== null
-                          ? "context " + Math.round(AgentBridge.contextUsage.percent) + "%"
-                          : "context —"
-                    color: Theme.dim
-                    font.family: Theme.font
-                    font.pixelSize: Theme.fs9
-                }
-
                 // notifcenter (ANALYSIS §5.5): i-bell + NOTIFICATIONS · dnd · Clear
                 Row {
                     visible: colC.panelId === "notifcenter"
@@ -690,16 +564,6 @@ ShellRoot {
                     active: bodyC.panelId === "notifcenter"
                     sourceComponent: NotifCenter {}
                 }
-                Loader {
-                    anchors.fill: parent
-                    active: bodyC.panelId === "chat"
-                    sourceComponent: AgentChat {}
-                }
-                Loader {
-                    anchors.fill: parent
-                    active: bodyC.panelId === "aimgr"
-                    sourceComponent: AgentMgr {}
-                }
             }
         }
         foot: Component {
@@ -714,11 +578,6 @@ ShellRoot {
                     text: colC.panelId === "notifcenter"
                           ? NotifStore.historyCount + " unread · dnd "
                             + (NotifStore.dnd ? "on" : "off")
-                          : colC.panelId === "chat" || colC.panelId === "aimgr"
-                          ? (AgentBridge.statusText.length > 0 ? AgentBridge.statusText
-                             : AgentBridge.currentModel
-                               ? AgentBridge.currentModel.provider + "/" + AgentBridge.currentModel.id
-                               : (AgentBridge.connected ? "connected" : "offline"))
                           : "slot c"
                     color: Theme.dim
                     font.family: Theme.font
