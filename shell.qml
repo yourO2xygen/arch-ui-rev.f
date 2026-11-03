@@ -442,51 +442,41 @@ ShellRoot {
         }
     }
 
-    // ------------------------------------------------- клавиатура и grab (Task 21)
-    // Семантика hyprland-focus-grab-v1 (сверено с реализациями quickshell
-    // src/wayland/hyprland/focus_grab и Hyprland src/protocols/FocusGrab.cpp):
-    // grab — это seat grab по pointer И клавиатуре разом; при активации
-    // композитор ОТДАЁТ wl_keyboard::enter первой скоммиченной беленой
-    // поверхности (CFocusGrab::start → refocusKeyboard → rawSurfaceFocus),
-    // не спрашивая WlrLayershell.keyboard_interactivity. «Пассивного» grab
-    // не бывает — активированная панель всегда ворует клавиатуру у тайла
-    // (ломается grp:alt_shift_toggle-раскладка и ввод активного окна).
-    // Дисмисс-граб ниже оставлен (клик мимо должен закрывать панели), а
-    // украденную клавиатуру его активация сразу возвращает последнему
-    // активному XDG-окну — Hyprland.activeToplevel (событие activewindowv2
-    // при уходе фокуса на слой не приходит, т.е. это ровно то окно, у
-    // которого клавиатуру и нужно вернуть) через foreign-toplevel activate().
-    // Лаунчер (Exclusive) — осознанное исключение: ему клавиатура и нужна.
-
-    // Реакция на активацию dismiss-grab: вернуть клавиатуру прежнему окну.
-    function _returnKeyboard() {
-        if (LayoutState.slots.B === "launcher") return
-        const tl = Hyprland.activeToplevel
-        if (tl === null || tl.wayland === null) return
-        tl.wayland.activate()
-    }
+    // ------------------------------------------------ клавиатура и grab (Task 26 / решение F1)
+    // Протокол hyprland-focus-grab-v1 НЕ имеет «пассивного» режима: grab в
+    // Hyprland 0.57 всегда CSeatGrab с m_keyboard=true (FocusGrab.cpp:20) и
+    // пока он жив, композитор ОТКАЗЫВАЕТ отдавать wl_keyboard любой поверхности
+    // вне whitelist — FocusState.cpp:238 «surface … won't receive kb focus
+    // because grab rejected it». Activate по foreign-toplevel (фикс Task 21)
+    // выполняется, но клавиатурную часть compositor молча отбрасывает, поэтому
+    // «вернуть фокус окну» на живом grab невозможно НИКАКИМ таймингом (проверено
+    // по исходникам всех трёх уровней: протокол v1 без флага, FocusGrab.cpp
+    // hardcode, HyprlandFocusGrab qs — только active/windows).
+    //
+    // Решение юзера (F1, 2026-11-03): dismiss-grab держат ТОЛЬКО панели с
+    // текстовым вводом (taskmgr — фильтр, chat — поле ввода; клавиатура им по
+    // назначению). Пассивные панели (sysinfo/docker/notifcenter/aimgr/logout/
+    // calendar/bar) grab не активируют ВООБЩЕ → их открытие не трогает
+    // клавиатуру тайла. Плата (осознанное решение юзера): клик мимо пассивной
+    // панели её больше не закрывает — закрытие повторным биндом (toggle
+    // идемпотентен) или заменой другой панелью. Пока открыт лаунчер, dismiss-grab
+    // гасится (у Hyprland один grab на seat; два живых HyprlandFocusGrab
+    // конкурируют: активация второго вычищает первый и его onCleared ложно
+    // срабатывает как «клик мимо») — панели-с-текстом остаются открытыми и
+    // просто теряют click-outside dismissal до закрытия лаунчера.
 
     // Дисмисс слот-панелей (Task 15): клик ЛКМ вне открытых панелей archui
-    // закрывает ВСЕ видимые панели слот-типа (слоты + календарь + бар) штатной
-    // хореографией LayoutState. Идиома как у лаунчера: HyprlandFocusGrab белит
-    // список окон, клик вне списка гасит grab (onCleared). Grab активирован,
-    // пока открыта хоть одна панель; все close* идемпотентны, поэтому повторный
-    // onCleared (гашение grab при штатном закрытии) безвреден. Активация grab
-    // уводит клавиатуру в панель — возвращаем её прежнему окну сразу (см.
-    // разбор Task 21 выше), поэтому keyboardFocus слотов (OnDemand) и ввод
-    // тайла не страдают. Лаунчер закрывается собственным grab'ом выше — в
-    // active-условие не входит, чтобы с ним не пересекаться.
+    // закрывает ВСЕ видимые панели штатной хореографией LayoutState. Whitelist
+    // прежний (все окна демона): grab активен только при текстовой панели,
+    // клики по прочим окнам (пассивным, открытым одновременно с ней) проходят
+    // как «в список» и не гасят grab. Лаунчер (Exclusive, собственный grab
+    // выше) в active-условие не входит — см. разбор F1 выше.
     HyprlandFocusGrab {
         id: dismissGrab
-        active: colA.open
-                || LayoutState.slots.B === "logout"
-                || colC.open
-                || calendar.visible
-                || LayoutState.slots.bar !== null
+        active: LayoutState.slots.B !== "launcher"
+                && ((colA.open && LayoutState.slots.A === "taskmgr")
+                    || (colC.open && LayoutState.slots.C === "chat"))
         windows: [colA, colB, colC, calendar, bar]
-        // Активация grab уводит клавиатуру в панель (см. разбор выше) — сразу
-        // возвращаем её прежнему окну; grab остаётся жить как клик-детектор.
-        onActiveChanged: if (dismissGrab.active) root._returnKeyboard()
         onCleared: {
             if (colA.open || LayoutState.slots.B !== null || colC.open
                 || calendar.visible || LayoutState.slots.bar !== null) {

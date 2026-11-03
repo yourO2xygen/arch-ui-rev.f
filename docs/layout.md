@@ -90,28 +90,40 @@ Critical-уведомления сверх стека тостов сворач�
 
 ## KeyboardFocus
 
-Семантика hyprland-focus-grab-v1 (Task 21, сверено с src/wayland/hyprland/focus_grab
-в quickshell и src/protocols/FocusGrab.cpp + SeatManager в Hyprland): активный
-grab — это seat grab по pointer И клавиатуре разом; при активации композитор
-отдаёт `wl_keyboard::enter` первой скоммиченной беленой поверхности
-(`CFocusGrab::start → refocusKeyboard → rawSurfaceFocus`), НЕ спрашивая
-`WlrLayershell.keyboard_interactivity`. «Пассивной» формы grab не бывает —
-любое открытие захватной панели ворует клавиатуру у активного тайла (ломались
-раскладка `grp:alt_shift_toggle` и ввод активного окна).
+Семантика hyprland-focus-grab-v1 (Task 26, сверено с quickshell
+src/wayland/hyprland/focus_grab и Hyprland 0.57 src/protocols/FocusGrab.cpp,
+src/desktop/state/FocusState.cpp, src/managers/SeatManager.cpp): активный grab —
+это CSeatGrab по pointer И клавиатуре разом, `m_keyboard = true` захардкожен
+композитором (FocusGrab.cpp:20), у протокола v1 нет флага клавиатуры, у qs
+`HyprlandFocusGrab` — только `active`/`windows`. Пока grab жив, композитор
+ОТКАЗЫВАЕТ отдавать wl_keyboard любой поверхности вне whitelist
+(FocusState.cpp:238 «surface … won't receive kb focus because grab rejected
+it»): activate по foreign-toplevel выполняет «окружение» фокуса (activewindow-
+события постятся), но клавиатуру молча оставляет панели. Поэтому «grab жив +
+ввод у тайла» протоколом не достигается ВООБЩЕ — фиксы Task 21 (возврат
+фокуса через foreign-activate) нельзя было спасти никаким таймингом.
 
-Решение (shell.qml):
+Решение (F1, выбор юзера 2026-11-03; shell.qml):
 
-- launcher — `Exclusive` при открытии: клавиатура отдана лаунчеру по назначению;
-- слот-окна — `OnDemand`: клавиатура у панели только после клика в неё;
-- клик-мимо закрывает слот-панели/календарь/бар через dismiss-grab
-  (`HyprlandFocusGrab` на [colA, colB, colC, calendar, bar], активен при любой
-  открытой панели). Чтобы активация grab не воровала клавиатуру, она сразу
-  возвращается последнему активному XDG-окну: shell.qml кеширует адрес из
-  rawEvent `activewindowv2` и по `onActiveChanged` делает
-  `Hyprland.dispatch("focuswindow address:…")` (кроме случая открытого
-  лаунчера). Grab после этого живёт только как клик-детектор: фокус и ввод —
-  у тайла, клик мимо очищает grab → панели закрываются, клик в панель возвращает
-  фокус ей (OnDemand);
+- **dismiss-grab держат ТОЛЬКО панели с текстовым вводом**: taskmgr (фильтр)
+  и chat (поле ввода). Клавиатура при активации grab уходит панели — ей она и
+  нужна. Лаунчер держит собственный grab (см. ниже).
+- **пассивные панели** (sysinfo/docker/notifcenter/aimgr/logout/calendar/bar)
+  **grab не активируют вообще** → их открытие никогда не трогает клавиатуру
+  тайла (`CFocusGrab::refocusKeyboard` не зовётся — клавиатура остаётся окну).
+- Плата (осознанный trade-off юзера): клик мимо пассивной панели её больше
+  НЕ закрывает. Закрытие: повтор того же бинда (`toggle` идемпотентен) или
+  замена другой панелью.
+- launcher — `Exclusive` при открытии + собственный `HyprlandFocusGrab`
+  ([colB]); dismiss-grab при открытом лаунчере гасится (у Hyprland один grab
+  на seat — `CSeatManager::setGrab` замещает прежний и зовёт его callback →
+  `finish(true) → cleared`): иначе onCleared dismiss-grab'а ложно срабатывал
+  как «клик мимо» при КАЖДОМ открытии лаунчера поверх панели (pre-existing
+  каскад из ведомости, живой лог 2026-11-03). Пока лаунчер открыт,
+  панели-с-текстом живут, но теряют click-outside dismissal до его закрытия.
+- слот-окна — `OnDemand`: клавиатура у панели только после клика в неё
+  (текстовое поле получает её кликом; Esc-обработка kit/Panel от grab
+  не зависит);
 - при закрытии слота фокус-режим возвращается в `OnDemand` (не `None`) — окно
   скрыто и маска пуста, практической разницы нет; зафиксировано как осознанное
   решение.
