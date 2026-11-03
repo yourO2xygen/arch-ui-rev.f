@@ -34,22 +34,24 @@ ShellRoot {
     readonly property int slotY: scrH - slotH - pad
 
     // --- Слот B: компактное окно (Task 24, втрое ниже 544) ---
-    // Высота живёт содержимым: launcher ст.1 = dock only (50), ст.2 = dock + 4 строки
-    // (Theme.hSlotB); logout = хром + 2 ряда плиток по центру (241). При закрытии
+    // launcher = фикс-окно Theme.hSlotB (dock + 4 строки): рост видимого стекла
+    // при первом символе делает сам Launcher (glassH) внутри окна, окно НЕ
+    // ресайзится — Task 25: анимация высоты layershell-окна давала дрожь
+    // (compositor применяет новую позицию раньше нового буфера).
+    // logout = хром + 2 ряда плиток по центру (241). При закрытии
     // (slots.B = null) высота ЗАМОРАЖИВАЕТСЯ — окно уходит волной в прежней геометрии.
     // Паддинги 12/16 — те же литералы, что body кит kit/Panel.qml.
     property int colBH: Theme.hDock
     function _syncColBH() {
         const pid = LayoutState.slots.B
         if (pid === "launcher")
-            colBH = LayoutState.launcherStage2 ? Theme.hSlotB : Theme.hDock
+            colBH = Theme.hSlotB
         else if (pid === "logout")
             colBH = Theme.hHead + 12 + 2 * Theme.hTile + Theme.s6 + 16 + Theme.hFoot
     }
     Connections {
         target: LayoutState
         function onSlotsChanged() { root._syncColBH() }
-        function onLauncherStage2Changed() { root._syncColBH() }
     }
 
     // Тумблер DND (ANALYSIS §5.5 .sw: 32×18, бегунок 14×14, 160ms — Motion.dndToggle)
@@ -314,25 +316,16 @@ ShellRoot {
                                      ? WlrKeyboardFocus.Exclusive
                                      : WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "archui:col-b"
+        // launcher (владелец overlay) рисует стекло сам (glassH) внутри фикс-окна:
+        // окно НЕ анимируется по высоте (Task 25), маска/стекло растут по glassH.
+        overlayPanelId: "launcher"
         anchors { left: true; top: true }
         margins.left: Math.round((root.scrW - root.slotW) / 2)
-        // y от низа: нижняя кромка приклеена к scrH−pad, верх растёт с контентом.
-        // margin читает ТЕКУЩУЮ implicitHeight — она анимируется Behavior ниже,
-        // так что низ едет ровно за анимированной высотой (одна кривая, без второй
-        // анимации на grouped-свойстве margins).
+        // y от низа: нижняя кромка приклеена к scrH−pad. Высота окна статична
+        // на время жизни панели — margin читает неанимируемую implicitHeight.
         margins.top: root.scrH - colB.implicitHeight - root.pad
         implicitWidth: root.slotW
         implicitHeight: root.colBH
-        // Ресайз окна синхронен росту списка лаунчера (Motion.launcherGrow apple):
-        // список и окно растут одной кривой → верхняя кромка окна едет ровно по
-        // верхней кромке списка (лишнего стекла над dock нет).
-        Behavior on implicitHeight {
-            NumberAnimation {
-                duration: Motion.launcherGrow
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Motion.apple
-            }
-        }
 
         head: Component {
             Item {

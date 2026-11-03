@@ -46,6 +46,7 @@ PanelWindow {
     property var panels: []           // panelId'ы слота (стек Loader'ов, порядок = z при равенстве)
     property Component head: null     // общий head-кит слота, 40px
     property Component body: null     // контент панели; инстанс на каждый panelId стека
+    property string overlayPanelId: "" // panelId, владеющий overlay (задаёт glassH — Task 25)
     property Component overlay: null  // контент на всё окно слота (без head/foot/pad/clip) —
                                       // лаунчер T7: dock у нижней кромки слота, список 504×372
                                       // растёт от неё; геометрия SPEC §4 в границах body не помещается
@@ -82,11 +83,23 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     visible: false
 
+    // Динамическая высота видимого стекла/маски (Task 25): overlay-панель
+    // (launcher) выставляет glassH и растит её сам внутри фикс-высотного окна —
+    // анимация высоты самого layershell-окна в Hyprland дрожит (позиция
+    // применяется раньше новой геометрии буфера). −1 = обычное поведение (всё окно).
+    // На закрытии (panelId "") glassH ещё живёт у смонтированного overlay —
+    // wave уходит в замороженной геометрии стекла; при replace на чужой panelId
+    // стекло мгновенно на всё окно (новой панели нужен полный фон).
+    readonly property real _glassH: overlayLoader.item && "glassH" in overlayLoader.item
+                                   && (panel.panelId === panel.overlayPanelId || panel.panelId === "")
+        ? overlayLoader.item.glassH
+        : -1
+
     mask: Region {
         x: 0
-        y: 0
+        y: panel._glassH >= 0 ? panel.height - panel._glassH : 0
         width: panel._maskActive ? panel.width : 0
-        height: panel._maskActive ? panel.height : 0
+        height: panel._maskActive ? (panel._glassH >= 0 ? panel._glassH : panel.height) : 0
     }
 
     // ---------------------------------------------------------------- дерево
@@ -111,9 +124,14 @@ PanelWindow {
             progress: panel._glitchProgress
         }
 
-        // Поверхность. ⚠ QTBUG-137166: у прозрачного Rect не трогать border → border.width: 0.
+        // Поверхность. Task 25: стекло приклеено к низу окна с высотой _glassH
+        // (overlay-панели растят стекло сами, не ресайзя окно). −1 = всё окно.
+        // ⚠ QTBUG-137166: у прозрачного Rect не трогать border → border.width: 0.
         Rectangle {
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: panel._glassH >= 0 ? panel._glassH : parent.height
             color: Theme.surface
             border.width: 0
         }
@@ -122,7 +140,10 @@ PanelWindow {
         // Только на открытие из пустого слота; на replace отключено (SPEC §2).
         Rectangle {
             id: ghostA
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: panel._glassH >= 0 ? panel._glassH : parent.height
             color: "transparent"
             border.color: Theme.ghostLine
             border.width: 1
@@ -132,7 +153,10 @@ PanelWindow {
         }
         Rectangle {
             id: ghostB
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: panel._glassH >= 0 ? panel._glassH : parent.height
             color: "transparent"
             border.color: Theme.ghostLine
             border.width: 1
@@ -213,6 +237,7 @@ PanelWindow {
             // Оверлей на всё окно (см. property overlay). Едет в общей волне слота —
             // opacity контента (_contentStage) применяется к `content` целиком.
             Loader {
+                id: overlayLoader
                 active: panel.overlay !== null
                 sourceComponent: panel.overlay
                 anchors.fill: parent

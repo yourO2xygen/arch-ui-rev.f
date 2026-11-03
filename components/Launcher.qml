@@ -1,13 +1,12 @@
 // ARCH·UI v2 — components/Launcher.qml (SPEC §4, DESIGN §4 «launcher»)
 // Лаунчер приложений (слот B, panelId "launcher", оверлей на всё окно слота —
-// kit/Panel.overlay). Две стадии (Task 24: окно едет за контентом, пустого
-// стекла над dock нет):
-//   1 — dock Theme.hDock у нижней кромки слота = вся видимая высота окна (Kit.Field,
-//       placeholder «run…», каретка 3×2); список появляется НАД dock, окно НЕ
-//       растянуто заранее (высота синхронизирована в shell.qml через
-//       LayoutState.launcherStage2);
+// kit/Panel.overlay). Две стадии (Task 24 → Task 25: окно фиксированной высоты
+// hSlotB, растёт только видимое стекло glassH — дрожь анимации высоты окна убрана):
+//   1 — dock Theme.hDock у нижней кромки слота = всё видимое стекло (Kit.Field,
+//       placeholder «run…», каретка 3×2); список появляется НАД dock; высота
+//       ОКНА уже фикс Theme.hSlotB, но стекло/маска = dock only (glassH);
 //   2 — список dock + 4 строки (4×hRowL=140) растёт вверх от дока
-//       (Motion.launcherGrow 260ms, apple) по первому символу или ↑↓.
+//       (Motion.launcherGrow 260ms, apple) по первому символу или ↑↓;
 //       Строки hRowL: плитка-инициал 24, имя, категория dim справа; выбранная —
 //       inset-маркер 2px. «no matches» — dim. Список показывает до 4 строк.
 // Фильтр — подстрока (case-insensitive) по имени DesktopEntries (noDisplay=false).
@@ -29,6 +28,11 @@ Item {
     readonly property int listH: rowH * 4
     readonly property int rowH: Theme.hRowL
     readonly property int tileS: 24
+
+    // Высота видимого стекла слота B (Task 25): dock + растущий список. Читает
+    // kit/Panel (стекло/ghost/mask) — растёт Behavior listWrap, окно слота НЕ
+    // ресайзится (анимация высоты layershell-окна дрожит), список — тот же launcherGrow.
+    readonly property real glassH: root.dockH + listWrap.height
 
     // ------------------------------------------------------------- приложения
     // DesktopEntries.applications.values — QObjectList всех записей; фильтруем
@@ -144,15 +148,8 @@ Item {
     // Эксклюзивный клавиатурный фокус окна (shell.qml) садится в поле лаунчера.
     Component.onCompleted: dock.input.forceActiveFocus()
 
-    // Task 24: стадия-2 наружу — окно слота B (shell.qml) меняет высоту под контент.
-    function _syncStage() {
-        if (visible && LayoutState.slots.B === "launcher")
-            LayoutState.launcherStage2 = root.stage2
-    }
-    onStage2Changed: root._syncStage()
     onVisibleChanged: {
         if (visible) dock.input.forceActiveFocus()
-        root._syncStage()
     }
 
     // ------------------------------------------------------------------ dock
