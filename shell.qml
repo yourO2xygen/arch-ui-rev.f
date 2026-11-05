@@ -54,33 +54,100 @@ ShellRoot {
         function onSlotsChanged() { root._syncColBH() }
     }
 
-    // Тумблер DND (ANALYSIS §5.5 .sw: 32×18, бегунок 14×14, 160ms — Motion.dndToggle)
-    component DndToggle: Rectangle {
-        id: tg
-        property bool on: false
-        width: 32
-        height: 18
-        color: tg.on ? Theme.invBg : Theme.raise
+    // DND: сегмент-кнопка [OFF|ON] (design-proposal 2026-11-05 REV.E/F, .seg2) —
+    // бегунок 32×18 (Track+Thumb) отвергнут: две равные половины в одном ложе,
+    // АКТИВНАЯ половина ИНВЕРСНАЯ (заливка invBg #f4f4f5, текст invFg #000) —
+    // состояние читается позицией ЗАЛИВКИ и словом на самой кнопке; неактивная —
+    // прозрачная с ghost-caps «OFF»/«ON» (8–9px). Между половинами волосяной шов
+    // ghost, при hover+on гаснет — инверсная половина глотает стык.
+    // Анимация 100ms apple (REV motion: dnd 100; Motion.dndToggle=160 — по макету).
+    // Label «dnd» (что это) живёт в head РЯДОМ, отдельно от дескриптора off/on.
+    component DndSeg: Rectangle {
+        id: seg
 
+        property bool on: false
+        readonly property bool hovered: segMa.containsMouse
+        readonly property real halfW: 27   // .seg2 span 27px — половина клетки
+
+        width: halfW * 2 + 3   // 27+27 половины + шов 1 + внешние рамки 2
+        height: 20
+        color: "transparent"
+        border.width: 1
+        // hover — контур-инверсия: внутренняя рамка 1px ghost → txt
+        border.color: seg.hovered ? Theme.txt : Theme.ghost
+        Behavior on border.color { ColorAnim {} }
+
+        // половина OFF (инверсна, когда dnd выключен)
         Rectangle {
-            x: tg.on ? 16 : 2
-            anchors.verticalCenter: parent.verticalCenter
-            width: 14
-            height: 14
-            color: tg.on ? Theme.invFg : Theme.txt2
-            Behavior on x {
-                NumberAnimation {
-                    duration: Motion.dndToggle
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: Motion.apple
-                }
+            x: 1
+            y: 1
+            width: seg.halfW
+            height: parent.height - 2
+            color: !seg.on
+                   ? Theme.invBg
+                   : segMa.pressed ? Theme.raise : "transparent"
+            Behavior on color { ColorAnim {} }
+            Text {
+                anchors.centerIn: parent
+                text: "OFF"
+                color: !seg.on ? Theme.invFg : Theme.dim
+                font.family: Theme.font
+                font.pixelSize: 9
+                font.weight: Font.Bold
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 1
+                Behavior on color { ColorAnim {} }
             }
         }
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: LayoutState.setDnd(!tg.on)
+
+        // волосяной шов между половинами; на активной стороне гаснет
+        // (CSS .seg2.on:hover span+span{border-left-color:transparent})
+        Rectangle {
+            x: 1 + seg.halfW
+            y: 1
+            width: 1
+            height: parent.height - 2
+            color: seg.hovered && seg.on ? "transparent" : Theme.ghost
+            Behavior on color { ColorAnim {} }
         }
+
+        // половина ON (инверсна, когда dnd включен)
+        Rectangle {
+            x: 2 + seg.halfW
+            y: 1
+            width: seg.halfW
+            height: parent.height - 2
+            color: seg.on
+                   ? Theme.invBg
+                   : segMa.pressed ? Theme.raise : "transparent"
+            Behavior on color { ColorAnim {} }
+            Text {
+                anchors.centerIn: parent
+                text: "ON"
+                color: seg.on ? Theme.invFg : Theme.dim
+                font.family: Theme.font
+                font.pixelSize: 9
+                font.weight: Font.Bold
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 1
+                Behavior on color { ColorAnim {} }
+            }
+        }
+
+        MouseArea {
+            id: segMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: LayoutState.setDnd(!seg.on)
+        }
+    }
+
+    // 100ms apple — общий примитив анимации сегмента (см. выше)
+    component ColorAnim: ColorAnimation {
+        duration: 100
+        easing.type: Easing.Bezier
+        easing.bezierCurve: Motion.apple
     }
 
     // Кнопка Clear (h26, .btn)
@@ -123,7 +190,7 @@ ShellRoot {
     Kit.Panel {
         id: colA
         slot: "A"
-        panels: ["docker", "taskmgr", "sysinfo"]
+        panels: ["sysinfo"]
         WlrLayershell.namespace: "archui:col-a"
         anchors { left: true; top: true }
         margins.left: root.pad
@@ -133,73 +200,7 @@ ShellRoot {
 
         head: Component {
             Item {
-                // head по умолчанию (docker до задачи 6).
-                // Пустой panelId — не рендерим «SLOT A»: фолбэк-надпись моргала в
-                // переходах слота (Task 15).
-                Text {
-                    visible: colA.panelId !== ""
-                             && colA.panelId !== "taskmgr"
-                             && colA.panelId !== "docker"
-                             && colA.panelId !== "sysinfo"
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: colA.panelId === "" ? "SLOT A" : colA.panelId.toUpperCase()
-                    color: Theme.txt2
-                    font.family: Theme.font
-                    font.pixelSize: Theme.fs11
-                    font.letterSpacing: 1
-                }
-
-                // taskmgr (ANALYSIS 5.x): i-activity + TASKMGR
-                Row {
-                    visible: colA.panelId === "taskmgr"
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-
-                    Kit.Icon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: "activity"
-                        size: 13
-                        color: Theme.txt2
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "TASKMGR"
-                        color: Theme.txt2
-                        font.family: Theme.font
-                        font.pixelSize: Theme.fs11
-                        font.letterSpacing: 1
-                    }
-                }
-
-                // docker (ANALYSIS 5.x): i-container + DOCKER
-                Row {
-                    visible: colA.panelId === "docker"
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-
-                    Kit.Icon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: "container"
-                        size: 13
-                        color: Theme.txt2
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "DOCKER"
-                        color: Theme.txt2
-                        font.family: Theme.font
-                        font.pixelSize: Theme.fs11
-                        font.letterSpacing: 1
-                    }
-                }
-
-                // sysinfo (ANALYSIS 5.3): i-gauge + SYSINFO · справа чип uptime
+                // sysinfo — единственная панель слота A: i-gauge + SYSINFO · справа чип uptime
                 Row {
                     visible: colA.panelId === "sysinfo"
                     anchors.left: parent.left
@@ -232,8 +233,7 @@ ShellRoot {
                 }
             }
         }
-        // docker — реальная панель (задача 6); taskmgr — реальная панель (задача 5);
-        // sysinfo — реальная панель (задача 5, перенесена из слота B — Task 12)
+        // sysinfo — единственная реальная панель слота A (задача 5, перенесена из слота B — Task 12)
         body: Component {
             Item {
                 id: bodyA
@@ -241,50 +241,25 @@ ShellRoot {
 
                 Loader {
                     anchors.fill: parent
-                    active: bodyA.panelId === "taskmgr"
-                    sourceComponent: TaskMgr {}
-                }
-                Loader {
-                    anchors.fill: parent
-                    active: bodyA.panelId === "docker"
-                    sourceComponent: Docker {}
-                }
-                Loader {
-                    anchors.fill: parent
                     active: bodyA.panelId === "sysinfo"
                     sourceComponent: SysInfo {}
                 }
                 Loader {
                     anchors.fill: parent
-                    active: bodyA.panelId !== "taskmgr"
-                            && bodyA.panelId !== "docker"
-                            && bodyA.panelId !== "sysinfo"
+                    active: bodyA.panelId !== "sysinfo"
                     sourceComponent: Placeholder { panelId: bodyA.panelId }
                 }
             }
         }
         foot: Component {
             Item {
-                // Пустой panelId (закрытие слота) — футер не флэшит фолбэки
-                // («archui» / «slot a», Task 15)
+                // Пустой panelId (закрытие слота) — футер не флэшит фолбэки (Task 15)
                 Text {
                     visible: colA.panelId !== ""
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: colA.panelId === "taskmgr"
-                          ? ProcMon.view.length + " / " + ProcMon.procs.length
-                            + " · sorted by " + ProcMon.sortBy
-                          : colA.panelId === "docker"
-                          ? (DockerMon.dockerPresent
-                             ? DockerMon.runningCount + " running · "
-                               + DockerMon.exitedCount + " exited · v"
-                               + DockerMon.version
-                             : "docker " + (DockerMon.ghostReason === "no permission"
-                                            ? "no permission" : "unavailable"))
-                          : colA.panelId === "sysinfo"
-                          ? Quickshell.env("USER") + "@" + SysMon.hostName
-                          : "archui"
+                    text: Quickshell.env("USER") + "@" + SysMon.hostName
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: Theme.fs9
@@ -294,9 +269,7 @@ ShellRoot {
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: colA.panelId === "taskmgr" ? "del · term"
-                        : colA.panelId === "docker" ? "logs · res · ports"
-                        : colA.panelId === "sysinfo" ? "kernel " + SysMon.kernel : "slot a"
+                    text: "kernel " + SysMon.kernel
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: Theme.fs9
@@ -330,14 +303,13 @@ ShellRoot {
         head: Component {
             Item {
                 // head по умолчанию (logout; launcher — оверлей без head, задача 7).
-                // Пустой panelId — не рендерим «SLOT B» (флэш в переходах, Task 15)
                 Text {
                     visible: colB.panelId !== "launcher"
                              && colB.panelId !== ""
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: colB.panelId === "" ? "SLOT B" : colB.panelId.toUpperCase()
+                    text: colB.panelId.toUpperCase()
                     color: Theme.txt2
                     font.family: Theme.font
                     font.pixelSize: Theme.fs11
@@ -409,18 +381,7 @@ ShellRoot {
                     text: colB.panelId === "logout"
                           ? Quickshell.env("USER") + " · up "
                             + SysMon.fmtUptime(SysMon.uptimeSec)
-                          : "archui"
-                    color: Theme.dim
-                    font.family: Theme.font
-                    font.pixelSize: Theme.fs9
-                }
-                Text {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: colB.panelId !== "launcher"
-                             && colB.panelId !== ""
-                    text: "slot b"
+                          : ""
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: Theme.fs9
@@ -438,52 +399,6 @@ ShellRoot {
             if (LayoutState.slots.B === "launcher") {
                 console.info("[archui] launcher: focus grab cleared — closing")
                 LayoutState.closeSlot("B")
-            }
-        }
-    }
-
-    // ------------------------------------------------ клавиатура и grab (Task 26 / решение F1)
-    // Протокол hyprland-focus-grab-v1 НЕ имеет «пассивного» режима: grab в
-    // Hyprland 0.57 всегда CSeatGrab с m_keyboard=true (FocusGrab.cpp:20) и
-    // пока он жив, композитор ОТКАЗЫВАЕТ отдавать wl_keyboard любой поверхности
-    // вне whitelist — FocusState.cpp:238 «surface … won't receive kb focus
-    // because grab rejected it». Activate по foreign-toplevel (фикс Task 21)
-    // выполняется, но клавиатурную часть compositor молча отбрасывает, поэтому
-    // «вернуть фокус окну» на живом grab невозможно НИКАКИМ таймингом (проверено
-    // по исходникам всех трёх уровней: протокол v1 без флага, FocusGrab.cpp
-    // hardcode, HyprlandFocusGrab qs — только active/windows).
-    //
-    // Решение юзера (F1, 2026-11-03): dismiss-grab держат ТОЛЬКО панели с
-    // текстовым вводом (taskmgr — фильтр; клавиатура ему по назначению).
-    // Пассивные панели (sysinfo/docker/notifcenter/logout/
-    // calendar/bar) grab не активируют ВООБЩЕ → их открытие не трогает
-    // клавиатуру тайла. Плата (осознанное решение юзера): клик мимо пассивной
-    // панели её больше не закрывает — закрытие повторным биндом (toggle
-    // идемпотентен) или заменой другой панелью. Пока открыт лаунчер, dismiss-grab
-    // гасится (у Hyprland один grab на seat; два живых HyprlandFocusGrab
-    // конкурируют: активация второго вычищает первый и его onCleared ложно
-    // срабатывает как «клик мимо») — панели-с-текстом остаются открытыми и
-    // просто теряют click-outside dismissal до закрытия лаунчера.
-
-    // Дисмисс слот-панелей (Task 15): клик ЛКМ вне открытых панелей archui
-    // закрывает ВСЕ видимые панели штатной хореографией LayoutState. Whitelist
-    // прежний (все окна демона): grab активен только при текстовой панели,
-    // клики по прочим окнам (пассивным, открытым одновременно с ней) проходят
-    // как «в список» и не гасят grab. Лаунчер (Exclusive, собственный grab
-    // выше) в active-условие не входит — см. разбор F1 выше.
-    HyprlandFocusGrab {
-        id: dismissGrab
-        active: colA.open && LayoutState.slots.A === "taskmgr"
-        windows: [colA, colB, colC, calendar, bar]
-        onCleared: {
-            if (colA.open || LayoutState.slots.B !== null || colC.open
-                || calendar.visible || LayoutState.slots.bar !== null) {
-                console.info("[archui] outside click — dismissing panels")
-                LayoutState.closeSlot("A")
-                LayoutState.closeSlot("B")
-                LayoutState.closeSlot("C")
-                calendar.visible = false
-                LayoutState.closeBar()
             }
         }
     }
@@ -544,7 +459,7 @@ ShellRoot {
                         font.family: Theme.font
                         font.pixelSize: Theme.fs8
                     }
-                    DndToggle {
+                    DndSeg {
                         anchors.verticalCenter: parent.verticalCenter
                         on: NotifStore.dnd
                     }
@@ -575,10 +490,8 @@ ShellRoot {
                     anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
                     visible: colC.panelId !== ""
-                    text: colC.panelId === "notifcenter"
-                          ? NotifStore.historyCount + " unread · dnd "
-                            + (NotifStore.dnd ? "on" : "off")
-                          : "slot c"
+                    text: NotifStore.historyCount + " unread · dnd "
+                          + (NotifStore.dnd ? "on" : "off")
                     color: Theme.dim
                     font.family: Theme.font
                     font.pixelSize: Theme.fs9
@@ -613,10 +526,13 @@ ShellRoot {
         exclusionMode: ExclusionMode.Ignore
         mask: Region { width: calendar.width; height: calendar.height }
 
+        // Волосяная рамка блока 1px Theme.ghost — как .win в макете REV.F.
+        // Rect непрозрачный (Theme.surface) — QTBUG-137166 не задевается.
         Rectangle {
             anchors.fill: parent
             color: Theme.surface
-            border.width: 0
+            border.width: 1
+            border.color: Theme.ghost
         }
 
         Calendar { id: calendarContent; anchors.fill: parent }
@@ -624,13 +540,14 @@ ShellRoot {
 
     // ------------------------------------------------------------------ BAR
     // Транзиент: автоскрытие Motion.barTimeout (hover-hold, рестарт по toggleBar)
-    // живёт в components/StatusBar.qml. Task 24: ширина 360·px (~375) — контент
-    // («часы/воркспейсы/язык» и ОСД 240-сегм) вписывается; было 500. 44 top-center.
+    // живёт в components/StatusBar.qml. Task 24: ширина 360·px (~375); было 500.
+    // V4 (design-proposal 2026-11-05): бар прижат к НИЖНЕЙ кромке экрана по центру
+    // («osc-edge»), было top-center; вся логика показа/скрытия (toggleBar/ОСД) та же.
     PanelWindow {
         id: bar
         WlrLayershell.namespace: "archui:bar"
-        anchors { left: true; top: true }
-        margins.top: 0
+        anchors { left: true; bottom: true }
+        margins.bottom: 0
         margins.left: Math.round((root.scrW - bar.implicitWidth) / 2)
         implicitWidth: Theme.wBar
         implicitHeight: Math.round(44 * Theme.px)
@@ -643,10 +560,13 @@ ShellRoot {
             height: bar.visible ? bar.height : 0
         }
 
+        // Волосяная рамка блока 1px Theme.ghost — как .win в макете REV.F.
+        // Rect непрозрачный (Theme.surface) — QTBUG-137166 не задевается.
         Rectangle {
             anchors.fill: parent
             color: Theme.surface
-            border.width: 0
+            border.width: 1
+            border.color: Theme.ghost
         }
 
         StatusBar { id: statusBar; anchors.fill: parent }

@@ -2,7 +2,8 @@
 // Панель истории уведомлений (слот C): секции TODAY/YESTERDAY/EARLIER (по локальной
 // дате), строки h52 (плитка 32 + тексты + время), у записей с живым объектом — кнопки
 // действий, у записей из JSONL — нет. DND → список .muted (opacity .3).
-// DND-тумблер и Clear живут в head слота (shell.qml), статус dnd — в foot.
+// DND-кнопка [OFF|ON] (сегмент REV.E/F) и Clear живут в head слота (shell.qml),
+// статус dnd — в foot; здесь — только .muted-реакция списка (opacity .3).
 //
 // Использование (shell.qml): body: Component { NotifCenter {} } — panelId назначает
 // kit/Panel.qml.

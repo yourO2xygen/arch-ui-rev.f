@@ -1,9 +1,12 @@
 // ARCH·UI v2 — components/Calendar.qml (SPEC §2, ANALYSIS §5.4, DESIGN-RESEARCH §4.2/§4.4)
+// Дата-first иерархия REV.D-F (макет 2026-11-05): counter-номер дня 40px tabular
+// («05») + подпись «THURSDAY / november 2026 · week 45» — на месте бывших часов.
 // Контент окна archui:calendar 264×288 (в свернутом виде окно — 264×40):
-//   head 30 (y10)  — ‹ месяц ›  + дата-чип (клик — сворачивание/разворачивание)
-//   dow  16 (y40)  — MO…SU, 8.5px dim, старт недели — понедельник
-//   grid 202 (y56) — 42 ячейки 32px, gap 2; сегодня — инверсия+700, соседи — ghost
-//   foot 22 (y258) — ISO-8601 неделя | месяц отображаемой сетки
+//   head 28 (y10)  — ‹ месяц ›  + дата-чип (клик — сворачивание/разворачивание)
+//   date 48 (y40)  — counter дня + день недели caps / месяц год · ISO-неделя
+//   dow  16 (y92)  — MO…SU,caps dim, старт недели — понедельник
+//   grid 154 (y112) — 42 ячейки 24px, gap 2; сегодня — инверсия, соседи — ghost
+//   foot 16 (y270) — iso-8601 слева | год·месяц сетки справа (ghost)
 //
 // Данные — реальный месяц JS Date; номер недели — ISO-8601 (в макете формула была
 // упрощённой — SPEC это чинит). ‹ › двигают отображаемый месяц (не персистится).
@@ -30,9 +33,9 @@ Item {
 
     // ------------------------------------------------------------- геометрия
     readonly property int padH: 14   // 264 − 2·14 − 12(gap) = 7·32 — сетка ровно 236
-    readonly property int headH: 30
+    readonly property int headH: 28
     readonly property int dowH: 16
-    readonly property int cellH: 32  // DESIGN-RESEARCH §4.4 (лента 288 вместо 400)
+    readonly property int cellH: 24  // REV.D-F: 6·24+5·2=154 — освобождает место date-band
 
     // -------------------------------------------------------------------- время
     SystemClock { id: clock; precision: SystemClock.Minutes }
@@ -178,11 +181,62 @@ Item {
             }
         }
 
+        // --------------------------------------------------------------- date-band
+        // REV.D-F: counter-номер дня 40px tabular занимает место бывших часов +
+        // подпись: день недели caps / месяц год · ISO-неделя.
+        Item {
+            id: dateBand
+            x: root.padH
+            y: 40
+            width: parent.width - root.padH * 2
+            height: 48
+
+            Text {
+                id: dayCounter
+                anchors.left: parent.left
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 2
+                text: DateFmt.dateCounter(root.todayD)
+                color: Theme.txt
+                font.family: Theme.font
+                font.pixelSize: 40
+                font.weight: Font.Bold
+                font.letterSpacing: -0.8          // ls -.02em от 40px
+                font.features: { "tnum": true }    // tabular-nums (макет .n)
+            }
+
+            Column {
+                anchors.left: dayCounter.right
+                anchors.leftMargin: 12            // gap:12 как в макете
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 8
+                spacing: 5
+
+                Text {
+                    text: DateFmt.weekdayFullCaps(root.today)   // THURSDAY
+                    color: Theme.txt2
+                    font.family: Theme.font
+                    font.pixelSize: Theme.fs10
+                    font.weight: Font.Medium
+                    font.letterSpacing: 1.2
+                }
+
+                Text {
+                    // ноябрь отображаемой сетки + ISO-неделя сегодня
+                    text: DateFmt.monthWeekFull(root.viewYear, root.viewMonth, root.weekNo)
+                    color: Theme.dim
+                    font.family: Theme.font
+                    font.pixelSize: Theme.fs9
+                    font.letterSpacing: 0.5
+                }
+            }
+        }
+
         // ------------------------------------------------------------------- dow
         Grid {
             id: dowRow
             x: root.padH
-            y: 40
+            y: 92
             columns: 7
             spacing: 2
 
@@ -211,7 +265,7 @@ Item {
         Grid {
             id: grid
             x: root.padH
-            y: 56
+            y: 112
             columns: 7
             spacing: 2
 
@@ -253,24 +307,26 @@ Item {
         // ------------------------------------------------------------------ foot
         Item {
             x: root.padH
-            y: 258
+            y: 270
             width: parent.width - root.padH * 2
-            height: Theme.hChip
+            height: 16
 
             Text {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                text: "week " + root.weekNo
-                color: Theme.dim
+                text: "iso-8601"
+                color: Theme.ghost
                 font.family: Theme.font
                 font.pixelSize: Theme.fs9
+                font.letterSpacing: 1.2
             }
 
             Text {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                text: DateFmt.monthYear(root.viewYear, root.viewMonth)
-                color: Theme.dim
+                // 2026·11 — год·месяц отображаемой сетки (ghost)
+                text: DateFmt.monthYearCompact(root.viewYear, root.viewMonth)
+                color: Theme.ghost
                 font.family: Theme.font
                 font.pixelSize: Theme.fs9
             }
@@ -279,7 +335,7 @@ Item {
 
     // --------------------------------------------------------------- дата-чип
     // Вне expanded: единственное, что остаётся при свёртывании (264×40).
-    // y = 10 (head) + (30 − 22)/2 — тот же вертикальный центр, что у head.
+    // y = 10 (head) + (28 − 22)/2 — тот же вертикальный центр, что у head.
     Rectangle {
         id: chip
         anchors.right: parent.right

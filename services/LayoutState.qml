@@ -11,10 +11,10 @@ import Quickshell
 Singleton {
     id: root
 
-    // panelId → слот (раскладка SPEC §0/§2). Панели вне этой сетки пока не существуют
-    // (задачи 3/4) — toggle по ним пишёт заглушку в лог.
+    // panelId → слот (раскладка SPEC §0/§2). Панели вне этой сетки не существуют —
+    // toggle по ним пишёт заглушку в лог.
     readonly property var panelSlots: ({
-        docker: "A", taskmgr: "A", sysinfo: "A",
+        sysinfo: "A",
         launcher: "B", logout: "B",
         notifcenter: "C"
     })

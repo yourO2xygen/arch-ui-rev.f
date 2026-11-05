@@ -8,6 +8,8 @@ var MONTHS = ["jan", "feb", "mar", "apr", "may", "jun",
               "jul", "aug", "sep", "oct", "nov", "dec"]
 var MONTHS_FULL = ["january", "february", "march", "april", "may", "june",
                    "july", "august", "september", "october", "november", "december"]
+var WEEKDAYS_FULL = ["sunday", "monday", "tuesday", "wednesday",
+                     "thursday", "friday", "saturday"]
 
 // `sun · nov 1` — дата бара и чип календаря
 function shortDate(y, m, d) {
@@ -30,7 +32,22 @@ function monthTitle(y, m) {
     return full.charAt(0).toUpperCase() + full.slice(1) + " " + y
 }
 
-// `nov 2026` — foot календаря
-function monthYear(y, m) {
-    return MONTHS[m] + " " + y
+// `05` — counter-номер дня (REV.D-F date-band), 2 цифры, tabular (mono-шрифт)
+function dateCounter(d) {
+    return ("0" + d).slice(-2)
+}
+
+// `THURSDAY` — день недели caps, строка над подписью date-band
+function weekdayFullCaps(date) {
+    return WEEKDAYS_FULL[date.getDay()].toUpperCase()
+}
+
+// `november 2026 · week 45` — месяц год · ISO-неделя, подпись date-band
+function monthWeekFull(y, m, w) {
+    return MONTHS_FULL[m] + " " + y + " · week " + w
+}
+
+// `2026·11` — foot календаря (год·месяц отображаемой сетки, ghost)
+function monthYearCompact(y, m) {
+    return y + "·" + ("0" + (m + 1)).slice(-2)
 }

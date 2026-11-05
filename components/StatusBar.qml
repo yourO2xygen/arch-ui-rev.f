@@ -1,19 +1,27 @@
-// ARCH·UI v2 — components/StatusBar.qml (SPEC §2/§7, ANALYSIS §5.1, DESIGN-RESEARCH §3.9)
-// Контент транзиентного бара (окно Theme.wBar 360·px — Task 24, было 500): слева
-// часы DSEG7 fs15 Bold · по центру воркспейсы · справа раскладка JBM fs15 Bold
-// на общем baseline с часами (симметрия, Task 24; раньше fs11 Medium).
+// ARCH·UI v2 — components/StatusBar.qml (DESIGN-PROPOSAL 2026-11-05 · bar V4 «osc-edge»)
+// Кромка-приборка: окно Theme.wBar 360×44 (shell.qml) прижато к нижней кромке экрана
+// ПО ЦЕНТРУ (V4 — переезд сверху вниз; заявка №1). Три равные ячейки ws | lng | clk:
+// silk-метка 8px caps dim над tabular-значением JBM 700 (~16px; моноширинный JBM сам
+// даёт tabular-стабилизацию ширины), швы — волосяные 1px ghost во всю высоту, ws-ячейка
+// ИНВЕРСНАЯ (единственный акцент, «03» с ведущим нулём целиком инверсно). Внизу —
+// шкала суток «осциллографическая кромка»: 24 тика, каждый 4-й выше, тик текущего
+// часа инверсный, позиция по реальному времени (hours/minutes → позиция, без таймера —
+// binding на SystemClock). LCD/DSEG7 снят полностью — в т.ч. процент ОСД теперь
+// tabular-цифры (заявка №4: LCD уходит из системы вообще).
 //
 // Данные: SystemClock (тик 1s) + Hyprland.workspaces / focusedMonitor.activeWorkspace +
-// rawEvent("activelayout"). Клик воркспейса → HyprlandWorkspace.activate()
-// (было: Hyprland.dispatch("workspace N") + 250ms-гонка — на Hyprland 0.57 lua-эра
-// legacy-строка падает, hyprwm/Hyprland#14675).
+// rawEvent("activelayout"/"changeworkspaceid"). Клик ws-ячейки → Hyprland.dispatch
+// ("workspace r+1") — цикл по существующим на мониторе (V4 показывает только текущий
+// номер; списковая сетка 22×22 из V2-бара ушла; activate() больше не нужен — r+1 ходит
+// по живым воркспейсам, пустых Hyprland не хранит).
 //
-// Поведение: автоскрытие Motion.barTimeout (hover держит — таймер стоп, уход — полные
-// 2800 заново, ANALYSIS §7.14; повторный toggleBar — рестарт); ghost-эхо на открытие —
-// те же параметры, что у панелей (ANALYSIS §3.2: #bar::before/::after); микро-flicker
-// 60ms часов на смене минуты (DESIGN-RESEARCH §3.9).
+// Поведение прежнее (заявка №1): автоскрытие Motion.barTimeout (hover держит — таймер
+// стоп, уход — полные 2800 заново; повторный toggleBar — рестарт), ghost-эхо и
+// lite-глич на открытие, микро-flicker на смену минуты; ОСД — второй volatile-режим
+// этого же бара (кросс-fade Motion.osdSwap 130ms), тот же hideTimer.
 //
-// Использование (shell.qml): StatusBar { anchors.fill: parent } в окне "archui:bar".
+// Использование (shell.qml): StatusBar { anchors.fill: parent } в окне "archui:bar"
+// (окно — bottom-center, anchors left+bottom, margins.top ушли в margins.bottom).
 
 import QtQuick
 import Quickshell
@@ -27,8 +35,17 @@ Item {
     id: root
 
     // --------------------------------------------------------------- геометрия
-    // Task 24: поля — Theme-производная (было 18 фикс); ширина окна — Theme.wBar (360·px)
+    // Ширина окна — Theme.wBar (360·px). Инлайн-токены V4 (в Theme их нет — выражаю
+    // здесь от Theme.px, DESIGN design-proposal-2026-11-05 §.sbar/.bc/.day):
+    //   fsSilk  — silk-метка 8px caps (глобальный .silk: 8px/.16em/ghost-dim)
+    //   dayH    — высота шкалы суток ~10px (в макете .day 8px + волосяная кромка;
+    //             по заявке беру 10)
     readonly property int padH: Theme.barPad
+    readonly property int fsSilk: Math.round(8 * Theme.px)
+    readonly property int dayH: Math.round(10 * Theme.px)
+    // тик суток: обычный 3px, каждый 4-й (maj) 6px — от макета .day i{h:3} i.q{h:6}
+    readonly property int dayTickMinor: Math.max(2, Math.round(3 * Theme.px))
+    readonly property int dayTickMaj: Math.max(4, Math.round(6 * Theme.px))
 
     // ------------------------------------------------------------------- время
     SystemClock { id: clock; precision: SystemClock.Seconds }
@@ -41,25 +58,21 @@ Item {
     // глич-появления сам фликерит content — встречный тик минуты не мешаем
     onMinuteNowChanged: if (!barGlitch.running) minuteFlicker.restart()
 
+    // Час/минуты для шкалы суток: позиция текущего тика = clock.hours, заполнение
+    // тика внутри часа — clock.minutes (binding-ом, отдельного таймера не нужно:
+    // SystemClock тикает раз в секунду и сам инвалидирует оба выражения).
+    readonly property int hourNow: clock.hours
+    readonly property real hourFrac: clock.minutes / 60
+
     // -------------------------------------------------------------- воркспейсы
-    // Занятость = воркспейс существует в Hyprland (пустые он удаляет сам, так что
-    // «существует» ≈ «в использовании»). Активность — по фокусированному монитору.
+    // V4 показывает только НОМЕР текущего воркспейса (с ведущим нулём, «03»),
+    // целиком в инверсной ячейке. Занятость/сетка V2-бара ушли; модель нужна лишь
+    // initRetry'ю на старте (Hyprland заполняется асинхронно).
     readonly property var wsIds: {
         const ids = []
         const list = Hyprland.workspaces.values
         for (let i = 0; i < list.length; i++) ids.push(list[i].id)
         return ids
-    }
-
-    function wsOccupied(id) { return root.wsIds.indexOf(id) !== -1 }
-
-    // Базово показываем 4; занятые айди правее добавляются, предел — прежние 6
-    // (пункт №8: `Math.max(4, maxOccupiedId)`, пустые 5+ не показываем).
-    readonly property int wsCount: {
-        let max = 4
-        for (let i = 0; i < root.wsIds.length; i++)
-            if (root.wsIds[i] > max) max = root.wsIds[i]
-        return Math.min(6, max)
     }
 
     // Активный воркспейс — из событий (focusedMonitor.activeWorkspace у этой сборки
@@ -80,22 +93,16 @@ Item {
           ? Hyprland.focusedMonitor.activeWorkspace.id
         : _modelActiveId()
 
-    // Переключение воркспейса: канонический HyprlandWorkspace.activate() (Quickshell
-    // 0.3.2) — сам учитывает lua-эру (usingLua), без 250ms-гонки с подтормаживающей
-    // моделью. Воркспейса нет в модели (пустой — Hyprland удаляет сам) → остаётся
-    // только dispatch: activate() требует существующий объект.
-    function currentWsId() { return root.activeWsId }
+    // «03» — ведущий ноль, как в макете; на пустой модели (старт) — прочерк.
+    readonly property string wsText:
+        root.activeWsId > 0
+        ? (root.activeWsId < 10 ? "0" + root.activeWsId : "" + root.activeWsId)
+        : "--"
 
-    function switchTo(id) {
-        if (currentWsId() === id) return
-        const list = Hyprland.workspaces.values
-        for (let i = 0; i < list.length; i++) {
-            if (list[i].id === id) {
-                list[i].activate()
-                return
-            }
-        }
-        Hyprland.dispatch("workspace " + id)
+    // Клик ws-ячейки: цикл по существующим воркспейсам монитора (r+1 ходит только по
+    // живым; пустые Hyprland удаляет сам). activate()-гонка V2 больше не нужна.
+    function cycleWs() {
+        Hyprland.dispatch("workspace r+1")
     }
 
     // -------------------------------------------------------------------- ОСД
@@ -189,10 +196,8 @@ Item {
     // FileView + поллинг ~300ms только пока mode==="brightness". Триггер показа —
     // IPC из бинда (hyprland.lua append `&& qs ... osd brightness`), дебаунс 150ms.
     // Task 21: blockLoading делает синхронным только ПЕРВЫЙ read (дальше text()
-    // вечно отдаёт кеш — он не следит за файлом без watchChanges, а sysfs нельзя
-    // inotify). Идиома свежего чтения: перед каждым text() дергать reload()
-    // (сбрасывает кеш) при blockAllReads (тогда text() делает loadSync —
-    // синхронный read с диска; FileView::shouldBlockRead, src/io/fileview.cpp).
+    // вечно отдаёт кеш — он не следует за файлом без watchChanges, а sysfs нельзя
+    // inotify). Идиома свежего чтения: перед каждым text() дергать reload().
     FileView {
         id: sysBrightness
         path: "/sys/class/backlight/intel_backlight/brightness"
@@ -211,8 +216,7 @@ Item {
     property real _lastBright: -1   // последний показанный/зафиксированный (0..1)
 
     function _brightnessNow() {
-        // Task 21: reload() перед text() — иначе text() отдаёт кеш первого
-        // чтения (см. комментарий к FileView выше).
+        // Task 21: reload() перед text() — иначе text() отдаёт кеш первого чтения.
         sysBrightness.reload()
         sysMaxBrightness.reload()
         const raw = parseFloat(sysBrightness.text())
@@ -284,12 +288,10 @@ Item {
     }
 
     // ------------------------------------------------------------------ дерево
-    // Пункт №8: слева часы · по центру воркспейсы · справа раскладка. Единая обвязка
-    // anchors left/center/right (Task 19 положит сюда OSD-контент той же ширины).
-    //
-    // Task 19: barLayer + osdLayer друг над другом (окно/маска не переоткрываются),
-    // кросс-fade Motion.osdSwap. Отдельные слои — чтобы fade не конфликтовал с
-    // barGlitch/minuteFlicker, которые анимируют content.
+    // V4 «osc-edge»: сверху ячейки (три равные, во весь бар, на волосяных швах),
+    // внизу — полоса шкалы суток. Task 19: barLayer + osdLayer друг над другом
+    // (окно/маска не переоткрываются), кросс-fade Motion.osdSwap. Отдельные слои —
+    // чтобы fade не конфликтовал с barGlitch/minuteFlicker, которые анимируют content.
     Item {
         id: barLayer
         anchors.fill: parent
@@ -304,93 +306,123 @@ Item {
             }
         }
 
-    Item {
-        id: content
-        anchors.fill: parent
+        Item {
+            id: content
+            anchors.fill: parent
 
-        // x-jitter lite-глича (Translate, не x — anchors держат позиции)
-        transform: Translate { id: jitter }
+            // x-jitter lite-глюча (Translate, не x — anchors держат позиции)
+            transform: Translate { id: jitter }
 
-        // -------------------------------------------------- слева: часы DSEG7
-        Text {
-            id: timeText
-            anchors.left: parent.left
-            anchors.leftMargin: root.padH
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.timeText
-            color: Theme.txt
-            font.family: Theme.fontDseg
-            font.pixelSize: Theme.fs15
-            font.bold: true
-            font.letterSpacing: 0.3   // ls .02em от 15px
-        }
+            // ------------------------------------------ область ячеек (без day-полосы)
+            // .v4c: sbar над .day — ячейки занимают верх, шкала суток — нижняя
+            // полоса высотой dayH.
+            Item {
+                id: cellStrip
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: dayScale.top
 
-        // ------------------------------------ по центру: воркспейсы (базово 4)
-        // 22×22 gap 4; on — инверсия+700, occ — raise/txt2, пустой — dim
-        Row {
-            anchors.centerIn: parent
-            spacing: 4
+                Row {
+                    anchors.fill: parent
 
-            Repeater {
-                model: root.wsCount
-
-                delegate: Rectangle {
-                    id: wsCell
-                    required property int index
-                    readonly property int wsId: index + 1
-                    readonly property bool active: root.activeWsId === wsCell.wsId
-                    readonly property bool occupied: root.wsOccupied(wsCell.wsId)
-                    readonly property bool hovered: wsMa.containsMouse
-
-                    width: Theme.hChip
-                    height: Theme.hChip
-                    color: active ? Theme.invBg
-                         : occupied || hovered ? Theme.raise : "transparent"
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: parent.wsId
-                        color: parent.active ? Theme.invFg
-                             : parent.occupied || parent.hovered ? Theme.txt2 : Theme.dim
-                        font.family: Theme.font
-                        font.pixelSize: Theme.fs10
-                        font.weight: parent.active ? Font.Bold : Font.DemiBold
+                    BarCell {
+                        width: (cellStrip.width - 2) / 3   // минус два шва 1px
+                        height: cellStrip.height
+                        label: "ws"
+                        valueText: root.wsText
+                        inv: true            // ws-ячейка инверсная — единственный акцент
+                        clickable: true
+                        onActivated: root.cycleWs()
                     }
+                    Rectangle { width: 1; height: parent.height; color: Theme.ghost }
+                    BarCell {
+                        width: (cellStrip.width - 2) / 3
+                        height: cellStrip.height
+                        label: "lng"
+                        valueText: root.layout.toLowerCase()
+                    }
+                    Rectangle { width: 1; height: parent.height; color: Theme.ghost }
+                    BarCell {
+                        width: (cellStrip.width - 2) / 3
+                        height: cellStrip.height
+                        label: "clk"
+                        valueText: root.timeText
+                    }
+                }
+            }
 
-                    MouseArea {
-                        id: wsMa
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchTo(parent.wsId)
+            // ---------------------------------------------- шкала суток (.day, V4)
+            // 24 тика на всю ширину: обычный 3px / каждый 4-й (maj) 6px / текущий час
+            // инверсный; сверх того — заполнение тика минутами (hours/minutes →
+            // позиция без таймера: binding на SystemClock тикает раз в секунду).
+            Item {
+                id: dayScale
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: root.dayH
+
+                // волосяная кромка сверху полосы (.day borderTop)
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    height: 1
+                    color: Theme.ghost
+                }
+
+                Row {
+                    id: dayRow
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.top: parent.top
+                    anchors.topMargin: 1
+
+                    Repeater {
+                        model: 24
+
+                        Item {
+                            id: dayTick
+                            required property int index
+                            readonly property bool current: dayTick.index === root.hourNow
+                            readonly property bool maj: (dayTick.index + 1) % 4 === 0
+                            width: dayRow.width / 24
+                            height: parent.height
+
+                            // тело тика: невысокий штрих от нижней кромки (raise2,
+                            // как rgba(255,255,255,.09) в макете)
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: Math.max(1, parent.width - 2)   // зазор 2px между тиками
+                                height: dayTick.maj ? root.dayTickMaj : root.dayTickMinor
+                                color: Theme.raise2
+                            }
+
+                            // текущий час — инверсный тик с заполнением минутой:
+                                // белый до доли minuteNow/60 ширины тика. Источник —
+                                // binding без таймера: SystemClock сам инвалидирует hourFrac
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                anchors.left: parent.left
+                                anchors.leftMargin: 1
+                                width: Math.max(1, (parent.width - 2) * root.hourFrac)
+                                height: dayTick.maj ? root.dayTickMaj : root.dayTickMinor
+                                color: Theme.invBg
+                                visible: dayTick.current
+                            }                        }
                     }
                 }
             }
         }
-
-        // ------------------------------------------- справа: раскладка (#bar .bl)
-        // Task 24 («симметрия язык/часы»): JBM fs15 Bold — равноценна DSEG7-часам
-        // слева, зеркальные отступы от края (padH), общий baseline с часами.
-        // DSEG7-глифы сидят выше шрифтового baseline (его цифры — капс-высота),
-        // поэтому микрокоррекция −3px поднята пиксельным замером: вертикальные
-        // центры глифов совпадают (язык 21–36, часы 19–38 физ. в баре 58px).
-        Text {
-            anchors.right: parent.right
-            anchors.rightMargin: root.padH
-            anchors.baseline: timeText.baseline
-            anchors.baselineOffset: -3
-            text: root.layout
-            color: Theme.txt
-            font.family: Theme.font
-            font.pixelSize: Theme.fs15
-            font.weight: Font.Bold
-        }
-    }
     }   // barLayer
 
     // ------------------------------------------------- ОСД-слой (Task 19, №9)
-    // Строка той же полосы 500: иконка + сегмент-бар свечей + процент DSEG7 (как
-    // табло часов — единый образный цифровой стиль полосы). Монохром, Kit.Icon /
+    // Строка той же полосы: иконка + сегмент-бар свечей + процент tabular (заявка №4:
+    // DSEG7 снят; JBM-моноширинник сам даёт табулярную стабильность ширины, но ширину
+    // блока фиксируем — «100» не сдвигает бар при кросс-fade). Монохром, Kit.Icon /
     // Kit.SegBar. Слой включается тем же кросс-fade, что выключает barLayer.
     Item {
         id: osdLayer
@@ -427,11 +459,11 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.osdPctText
                 color: Theme.txt
-                font.family: Theme.fontDseg
+                font.family: Theme.font
                 font.pixelSize: Theme.fs15
-                font.bold: true
+                font.weight: Font.Bold
                 font.letterSpacing: 0.3
-                // DSEG7 — только цифры; ширина стабилизирована lS, «100» не прыгает
+                // фикс-ширина блока — JBM mono табулярен, «5» и «100» не прыгают
                 horizontalAlignment: Text.AlignHCenter
                 width: Theme.fs15 * 4
             }
@@ -556,7 +588,7 @@ Item {
     }
 
     // hover над баром держит: вход — стоп, выход — полные 2800 заново (ANALYSIS §7.14).
-    // HoverHandler, а не MouseArea: неэксклюзивен по hover — ячейки воркспейсов под ним
+    // HoverHandler, а не MouseArea: неэксклюзивен по hover — ячейки под ним
     // (MouseArea, z ниже) продолжают получать containsMouse/cursor.
     HoverHandler {
         id: hoverHold
@@ -584,7 +616,8 @@ Item {
     }
 
     // Модель Hyprland на старте пустая — заполняется асинхронно; пока не заполнилась,
-    // дотягиваем refresh'ами (дешёвые monoclient-запросы, прекращаются после первого успеха).
+    // дотягиваем refresh'ами (дешёвые monoclient-запросы, прекращаются после первого
+    // успеха). V4: нужен только активный id (сетка ячеек ушла).
     Timer {
         id: initRetry
         property int attempts: 0
@@ -609,5 +642,62 @@ Item {
         // база яркости без показа: первый osd brightness покажется только
         // если значение реально изменилось от стартового
         root._lastBright = root._brightnessNow()
+    }
+
+    // ================================================================ ячейки V4
+    // .bc: flex:1, column по центру, gap 3px; silk-метка над tabular-значением.
+    // hover — контур-инверсия (outline 1px ink); .bc.inv:hover в макете гасит
+    // заливку — инверсная ws-ячейка на hover «разинвиливается» к обычному виду.
+    component BarCell: Rectangle {
+        id: cell
+        property string label
+        property string valueText
+        property bool inv: false
+        property bool clickable: false
+        signal activated()
+        readonly property bool hovered: cellMa.containsMouse
+
+        // .bc:hover{outline:1px solid var(--ink)} — контур внутрь (offset -1)
+        border.width: !cell.inv && cell.hovered ? 1 : 0
+        border.color: Theme.txt
+        // .bc.inv{background:var(--ink)} / .bc.inv:hover{background:var(--bg)}
+        color: cell.inv && !cell.hovered ? Theme.invBg : "transparent"
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 3   // gap макета .bc
+
+            Text {
+                // silk: 8px caps ghost/dim (.bc .silk{color:var(--dim)},
+                // инверсно — color bg + opacity .55)
+                text: cell.label
+                color: cell.inv && !cell.hovered ? Theme.invFg : Theme.dim
+                opacity: cell.inv && !cell.hovered ? 0.55 : 1
+                font.family: Theme.font
+                font.pixelSize: root.fsSilk
+                font.weight: Font.Medium
+                font.letterSpacing: Math.max(1, fsSilk * 0.16)   // ls .16em
+                font.capitalization: Font.AllUppercase
+            }
+            Text {
+                // .bv: tabular 16px/700; JBM моноширинный — цифры стабильны и без
+                // font-variant-numeric (инлайн-токен вместо него).
+                text: cell.valueText
+                color: cell.inv && !cell.hovered ? Theme.invFg : Theme.txt
+                font.family: Theme.font
+                font.pixelSize: Theme.fs15          // ≈16px при px≈1.04
+                font.weight: Font.Bold
+                font.letterSpacing: 0.3             // ls .02em от 16px
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
+
+        MouseArea {
+            id: cellMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: cell.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: if (cell.clickable) cell.activated()
+        }
     }
 }

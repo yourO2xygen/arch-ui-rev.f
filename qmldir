@@ -3,15 +3,11 @@ singleton Motion 1.0 Motion.qml
 singleton LayoutState 1.0 services/LayoutState.qml
 singleton NotifStore 1.0 services/NotifStore.qml
 singleton SysMon 1.0 services/SysMon.qml
-singleton ProcMon 1.0 services/ProcMon.qml
 Placeholder 1.0 components/Placeholder.qml
 StatusBar 1.0 components/StatusBar.qml
 Calendar 1.0 components/Calendar.qml
 Toasts 1.0 components/Toasts.qml
 NotifCenter 1.0 components/NotifCenter.qml
-TaskMgr 1.0 components/TaskMgr.qml
 SysInfo 1.0 components/SysInfo.qml
-singleton DockerMon 1.0 services/DockerMon.qml
-Docker 1.0 components/Docker.qml
 Launcher 1.0 components/Launcher.qml
 Logout 1.0 components/Logout.qml

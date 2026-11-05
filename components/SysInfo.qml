@@ -101,6 +101,7 @@ Item {
             Kit.SegBar {
                 width: parent.width
                 value: cell.barValue
+                ghost: cell.ghost          // iGPU/нет gpu: заполненные — txt2 · .35 (REV.E)
             }
         }
 
@@ -138,8 +139,10 @@ Item {
                     height: Math.max(1, Math.round(
                         (SysMon.cpuHist[SysMon.cpuHist.length - parent.filled + index] || 0)
                         * root.sparkH))
-                    // индексация цвета — та же формула, что у высоты (синхронизация
-                    // фикс M6: раньше в прогреве читался отрицательный индекс)
+                    // Индексация цвета — та же формула, что у высоты (синхронизация
+                    // фикс M6: раньше в прогреве читался отрицательный индекс).
+                    // REV.E .spark: столбики ≥ порога 0.6 — ИНВЕРСИЯ (var(--ink) =
+                    // Theme.txt), остальные — txt2; никакой альфа-подсветки.
                     color: (SysMon.cpuHist[SysMon.cpuHist.length - parent.filled + index] || 0) >= 0.6
                            ? Theme.txt : Theme.txt2
                 }
@@ -162,12 +165,42 @@ Item {
         width: parent.width                    // Task 17: одноколоночный HARDWARE — во всю ширину
         height: Theme.hRowS
 
+        // Волосяная система (GRID-A6): hover датчик-ряда — контур-инверсия
+        // (волосок 1px Theme.txt), active (press) — полная инверсия (invBg + invFg).
+        readonly property bool hovered: hwMa.containsMouse
+        readonly property bool pressed: hwMa.pressed
+
+        Rectangle {                             // фон полной инверсии на active
+            anchors.fill: parent
+            color: hw.pressed ? Theme.invBg : "transparent"
+            Behavior on color {
+                ColorAnimation { duration: Motion.hoverMs; easing.type: Easing.Bezier; easing.bezierCurve: Motion.apple }
+            }
+        }
+        Rectangle {                             // волосок-контур на hover
+            anchors.fill: parent
+            anchors.margins: 2.5              // тот же inset-контур, что у kit/Row (mrow)
+            color: "transparent"
+            border.width: 1
+            border.color: Theme.txt
+            opacity: hw.hovered && !hw.pressed ? 1 : 0
+            visible: opacity > 0.01
+            Behavior on opacity {
+                NumberAnimation { duration: Motion.hoverMs; easing.type: Easing.Bezier; easing.bezierCurve: Motion.apple }
+            }
+        }
+        MouseArea {
+            id: hwMa
+            anchors.fill: parent
+            hoverEnabled: true
+        }
+
         Kit.Icon {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             name: hw.icon
             size: 12
-            color: hw.ghost ? Theme.ghost : Theme.txt2
+            color: hw.pressed ? Theme.invFg : hw.ghost ? Theme.ghost : Theme.txt2
         }
         Text {
             anchors.left: parent.left
@@ -175,7 +208,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: Theme.wLabel - 20         // метка-колонка wLabel = 20 + (wLabel−20)
             text: hw.label
-            color: Theme.dim
+            color: hw.pressed ? Theme.invFg : Theme.dim
             font.family: Theme.font
             font.pixelSize: Theme.fs9
             font.letterSpacing: 1
@@ -187,7 +220,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width - Theme.wLabel - hw.metaW - 4
             text: hw.value
-            color: hw.ghost ? Theme.dim : Theme.txt
+            color: hw.pressed ? Theme.invFg : hw.ghost ? Theme.dim : Theme.txt
             elide: Text.ElideRight
             font.family: Theme.font
             font.pixelSize: Theme.fs11
@@ -197,7 +230,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: hw.metaW
             text: hw.meta
-            color: Theme.dim
+            color: hw.pressed ? Theme.invFg : Theme.dim
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
             font.family: Theme.font

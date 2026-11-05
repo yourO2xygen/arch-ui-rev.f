@@ -46,7 +46,6 @@ Singleton {
 
     // Прочее (SPEC §3)
     readonly property int hoverMs: 120
-    readonly property int killFade: 400
     readonly property int dndToggle: 160
     readonly property int launcherGrow: 260
     readonly property int barTimeout: 2800

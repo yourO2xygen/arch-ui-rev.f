@@ -26,14 +26,9 @@ Singleton {
 
     // --- Шрифты ---
     // JetBrainsMono NFM — системный (400–700), FontLoader не нужен.
+    // (DSEG7 удалён ред. 2026-11-05: LCD-индикаторов в системе больше нет —
+    // статус-бар/ОСД переведены на tabular-цифры JBM.)
     readonly property string font: "JetBrainsMono NFM"
-    // DSEG7 — FontLoader из assets; фактическое имя семейства берётся из загруженного шрифта.
-    readonly property string fontDseg: dseg.name
-
-    FontLoader {
-        id: dseg
-        source: Qt.resolvedUrl("assets/fonts/DSEG7Classic-Bold.ttf")
-    }
 
     // --- px-множитель (Task 17): расчёт от фактического экрана ---
     // Базовый дизайн отрисован под 1600×900 при monitor scale 1.2. Layershell-окна
@@ -81,7 +76,6 @@ Singleton {
     // --- Структурные высоты: head/foot панелей, ряды, чипы (базовые × px) ---
     readonly property int hHead: f(40)   // head-кит слота (kit/Panel)
     readonly property int hFoot: f(30)   // foot-кит слота (kit/Panel)
-    readonly property int hRow: f(30)    // панельные ряды (TaskMgr/Docker info)
     readonly property int hRowL: f(34)   // крупные ряды (Launcher)
     readonly property int hRowS: f(28)   // компактные ряды (kit/Row, строки SysInfo hw)
     readonly property int hChip: f(22)   // чипы/мини-плитки
@@ -103,7 +97,7 @@ Singleton {
     readonly property int s16: 16
 
     // --- Ключевые ширины (базовая × px: шрифт метки растёт вместе с колонкой) ---
-    readonly property int wLabel: f(84)  // метка-колонка label caps (Docker/SysInfo)
+    readonly property int wLabel: f(84)  // метка-колонка label caps (SysInfo)
     readonly property int wBar: f(360)  // окно статус-бара (Task 24: было 500)
 
     // --- Радиусы ---

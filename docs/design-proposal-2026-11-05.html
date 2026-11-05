@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1600">
+<title>ARCH·UI — REV.F / controls as instruments · bar V2</title>
+<style>
+/* ============ TOKENS: состав палитры не меняется — меняется прочтение ============ */
+:root{
+  --bg:#000000;
+  --pg:#0a0a0c;
+  --ink:#f4f4f5;
+  --tx2:#a1a1aa;
+  --dim:#56565e;
+  --gh:#3f3f46;
+  --ln:#26262a;
+  --raise:rgba(255,255,255,.05);
+  --raise2:rgba(255,255,255,.09);
+  --mono:"JetBrains Mono NFM","JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --apple:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--pg)}
+body{font-family:var(--mono);color:var(--ink);font-size:13px;line-height:1.45;min-width:1640px;padding-bottom:90px}
+::selection{background:var(--ink);color:var(--bg)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* подписи-caps — мельче и жёстче, чем в текущем виде */
+.cap{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.cap2{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--tx2);font-weight:600}
+.num{font-weight:700;font-variant-numeric:tabular-nums}
+.dim{color:var(--dim)}
+.t2{color:var(--tx2)}
+.ic{width:15px;height:15px;flex:none}
+.ic use{stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============ ЛИСТ ПРЕЗЕНТАЦИИ (чертёжная рамка) ============ */
+.sheet{max-width:1640px;margin:0 auto;padding:0 20px;position:relative}
+.corner{position:absolute;width:11px;height:11px;color:var(--gh)}
+.corner::before,.corner::after{content:"";position:absolute;background:currentColor}
+.corner::before{width:11px;height:1px;top:5px}
+.corner::after{width:1px;height:11px;left:5px}
+.c-tl{top:10px;left:10px}.c-tr{top:10px;right:10px}.c-bl{bottom:10px;left:10px}.c-br{bottom:10px;right:10px}
+
+.masthead{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;
+  border-bottom:1px solid var(--gh);padding:44px 8px 24px;margin-bottom:28px}
+.masthead h1{font-size:34px;font-weight:700;letter-spacing:-.01em;line-height:1.05}
+.masthead h1 small{display:block;font-size:11px;font-weight:500;letter-spacing:.3em;color:var(--dim);margin-top:10px;text-transform:uppercase}
+.mast-rc{font-size:10px;color:var(--dim);text-align:right;letter-spacing:.12em;line-height:1.9;text-transform:uppercase}
+.mast-rc b{color:var(--tx2);font-weight:600}
+
+.manifest{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:1px solid var(--gh);margin-bottom:48px}
+.man{padding:16px 18px 18px;border-left:1px solid var(--gh)}
+.man:first-child{border-left:0}
+.man .k{font-size:9.5px;letter-spacing:.22em;color:var(--tx2);font-weight:600;text-transform:uppercase;
+  border-bottom:1px solid var(--ln);padding-bottom:8px;margin-bottom:10px;display:flex;justify-content:space-between}
+.man .k i{font-style:normal;color:var(--gh)}
+.man p{font-size:11.5px;color:var(--tx2);line-height:1.6}
+.man p b{color:var(--ink);font-weight:600}
+
+/* ============ СЦЕНА: ЭКРАН 1600×900 ============ */
+.stage-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 12px}
+.stage{position:relative;padding:0 20px}
+.screen-frame{position:relative;width:1600px;margin:0 auto;background:var(--bg);
+  border:1px solid var(--gh);box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+.screen{position:relative;width:1600px;height:900px;background:var(--bg);overflow:hidden}
+.screen::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:90;
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.016) 0 1px,transparent 1px 3px)}
+.frame-tag{position:absolute;font-size:9.5px;color:var(--dim);letter-spacing:.18em;text-transform:uppercase}
+.ft-top{top:-22px;left:0}
+.ft-topr{top:-22px;right:0}
+
+/* окна шелла */
+.win{position:absolute;background:var(--bg);border:1px solid var(--gh)}
+.ruler{position:absolute;left:3px;top:46px;bottom:36px;width:5px;pointer-events:none;
+  background:
+    repeating-linear-gradient(to bottom,var(--gh) 0 1px,transparent 1px 13px),
+    repeating-linear-gradient(to bottom,var(--dim) 0 1px,transparent 1px 65px);
+  background-size:3px 100%,5px 100%;background-repeat:no-repeat,no-repeat}
+.ruler.r{left:auto;right:3px;background-size:2px 100%,4px 100%}
+
+/* head/foot панелей */
+.phead{height:40px;display:flex;align-items:center;gap:10px;padding:0 14px 0 16px;border-bottom:1px solid var(--gh)}
+.pfoot{height:30px;display:flex;align-items:center;gap:14px;padding:0 14px 0 16px;border-top:1px solid var(--gh)}
+.slot-id{width:18px;height:18px;border:1px solid var(--gh);color:var(--tx2);font-size:10px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;flex:none}
+.ptitle{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase}
+.spacer{flex:1}
+.chip{height:22px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border:1px solid var(--ln);color:var(--tx2);font-size:10px;letter-spacing:.08em}
+.chip .dot{width:5px;height:5px;background:var(--tx2);flex:none}
+
+/* кнопки — hover: контур-инверсия, active: полная инверсия (research §4.6) */
+.btn{height:26px;padding:0 11px;border:1px solid var(--gh);color:var(--tx2);
+  font-size:10px;font-weight:600;letter-spacing:.18em;transition:border-color 90ms var(--apple),color 90ms var(--apple),background 90ms var(--apple);text-transform:uppercase;background:transparent}
+.btn:hover{border-color:var(--ink);color:var(--ink)}
+.btn:active{background:var(--ink);color:var(--bg)}
+.btn:focus-visible{outline:1px solid var(--ink);outline-offset:2px}
+
+/* ============ DND: сегмент-кнопка [OFF|ON] — выбор REV.E (research §2b) ============
+   активная половина инвертирована → состояние читается позицией ЗАЛИВКИ и словом на
+   самой кнопке; текст-дескриптор ≠ label: слева «dnd» (что это), внутри — off/on (как) */
+.seg2{display:inline-flex;height:20px;border:1px solid var(--gh);flex:none;cursor:pointer;background:transparent;
+  transition:border-color 100ms var(--apple)}
+.seg2 span{width:27px;display:flex;align-items:center;justify-content:center;
+  font-size:8.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);
+  transition:background 100ms var(--apple),color 100ms var(--apple)}
+.seg2 span+span{border-left:1px solid var(--gh)}
+.seg2:hover{border-color:var(--ink)}                       /* hover — контур-инверсия */
+.seg2:active span{background:var(--raise)}                 /* press — лёгкий отпечаток */
+.seg2.off .s-off,.seg2.on .s-on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg2:focus-visible{outline:1px solid var(--ink);outline-offset:2px}
+.seg2.on:hover span+span{border-left-color:transparent}    /* инверсная половина глотает шов */
+.tglab{font-size:9.5px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+.seg2.on+ .tgstate{color:var(--ink)}
+.tgstate{font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-left:2px}
+
+/* отвергнутые варианты тумблера (лупа): инверсный трек, радио-строка, рычажок */
+.vtrack{width:34px;height:17px;border:1px solid var(--gh);position:relative;flex:none}
+.vtrack i{position:absolute;width:12px;height:11px;top:2px;left:2px;background:var(--tx2)}
+.vtrack.on{background:var(--ink);border-color:var(--ink)}
+.vtrack.on i{left:19px;background:var(--bg)}
+.vradio{font-size:9.5px;letter-spacing:.2em;color:var(--tx2);display:inline-flex;align-items:center;gap:6px}
+.vradio i{width:7px;height:7px;border:1px solid var(--tx2);display:inline-block}
+.vradio.on i:first-child{background:var(--ink);border-color:var(--ink)}
+.vlever{width:34px;height:17px;border:1px solid var(--gh);position:relative;flex:none;
+  background:linear-gradient(to bottom,rgba(255,255,255,.06),rgba(0,0,0,0))}
+.vlever::before{content:"";position:absolute;left:4px;right:4px;top:8px;height:1px;background:var(--gh)}
+.vlever i{position:absolute;width:12px;height:15px;top:.5px;left:1px;border:1px solid var(--tx2);background:var(--bg)}
+.vlever i::after{content:"";position:absolute;left:5px;top:3px;width:1px;height:8px;background:var(--tx2)}
+.vlever.on i{left:19px}
+
+/* ============ ТЕРМИНАЛЬНАЯ ШКАЛА-СЕТКА: сегменты с тиками (research §2/§4.4) ============ */
+/* каждый 10-й сегмент выше; активная часть — инверсией */
+.tscal{display:flex;align-items:flex-end;gap:2px;height:10px;width:100%}
+.tscal i{flex:1;height:5px;background:rgba(255,255,255,.09)}
+.tscal i.mj{height:10px}
+.tscal i.f{background:var(--ink)}
+
+/* шелк-скрин аннотации: коды-метки блоков данных (Bloomberg-приём, §1) */
+.silk{font-size:8px;letter-spacing:.16em;color:var(--gh);text-transform:uppercase;font-weight:500}
+
+/* ============ чекбоксы: инверсные квадраты (если появятся фильтры) ============ */
+.ck{width:14px;height:14px;border:1px solid var(--tx2);display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;
+  color:var(--bg);font-size:10px;font-weight:700;transition:background 90ms var(--apple)}
+.ck:hover{border-color:var(--ink)}
+.ck.on{background:var(--ink);border-color:var(--ink)}
+.ck.ind{background:var(--tx2);border-color:var(--tx2)}
+.ck:active{background:var(--raise)}
+
+/* ============ SYSINFO ============ */
+.pbody{position:absolute;top:41px;bottom:31px;left:0;right:0;padding:12px 14px 10px 18px;display:flex;flex-direction:column}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gh);border:1px solid var(--gh)}
+.mcell{background:var(--bg);height:112px;padding:9px 12px 10px;display:flex;flex-direction:column}
+.mcell .lr{display:flex;justify-content:space-between;align-items:center}
+.mcell .lr .grp{display:inline-flex;align-items:center;gap:8px}
+.spark{display:flex;align-items:flex-end;gap:2px;height:15px}
+.spark i{width:4px;background:var(--tx2)}
+.spark i.hi{background:var(--ink)}
+.vrow{display:flex;align-items:baseline;gap:6px;margin-top:5px}
+.vrow .v{font-size:25px;font-weight:700;line-height:1;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.vrow .u{font-size:10px;color:var(--dim)}
+.mcap{font-size:10px;color:var(--dim);margin-top:4px;letter-spacing:.02em;white-space:nowrap;overflow:hidden}
+.mbar{margin-top:auto}
+.mbar .tscal{height:8px;gap:2px}
+.mbar .tscal i{height:4px}
+.mbar .tscal i.mj{height:8px}
+.mcell.ghost .v,.mcell.ghost .mcap{color:var(--dim)}
+.mcell.ghost .tscal i.f{background:var(--tx2);opacity:.35}
+
+/* hardware-строки: волосяная линия вместо заливки */
+.hwsec{margin-top:12px}
+.hwsec .h{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--gh);padding-bottom:7px;margin-bottom:2px}
+.hwsec .h .n{font-size:9.5px;color:var(--gh)}
+.hw{display:grid;grid-template-columns:18px 84px 1fr 92px;align-items:center;height:29px;
+  border-bottom:1px solid var(--ln);padding:0 2px;transition:background 80ms var(--apple)}
+.hw:hover{background:var(--raise)}
+.hw:last-child{border-bottom:0}
+.hw .l{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.hw .v{font-size:12px;color:var(--ink)}
+.hw .m{font-size:9.5px;color:var(--dim);text-align:right}
+.hw.ghost .v{color:var(--dim)}
+.hw .ic{width:12px;height:12px;color:var(--tx2)}
+.hw.ghost .ic{color:var(--gh)}
+
+/* ============ LAUNCHER (слот B) ============ */
+.slot-legend{position:absolute;left:24px;top:32px;color:var(--gh);font-size:11px;line-height:2.2;letter-spacing:.14em}
+.slot-legend b{color:var(--dim);font-weight:500}
+.slot-legend .cur{color:var(--tx2)}
+.slot-coord{position:absolute;left:24px;bottom:212px;font-size:9.5px;color:var(--gh);letter-spacing:.18em}
+.glass{position:absolute;left:-1px;right:-1px;bottom:-1px;border:1px solid var(--gh);border-top:1px dashed var(--gh);background:var(--bg)}
+.lrow{height:37px;display:flex;align-items:center;gap:11px;padding:0 12px;position:relative}
+.lrow .tile{width:24px;height:24px;border:1px solid var(--ln);color:var(--tx2);font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.lrow .nm{font-size:12.5px;color:var(--ink)}
+.lrow .ct{margin-left:auto;font-size:9.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.lrow.sel{background:var(--ink)}
+.lrow.sel .nm,.lrow.sel .ct{color:var(--bg)}
+.lrow.sel .tile{border-color:rgba(0,0,0,.35);color:var(--bg)}
+.lrow:not(.sel):hover{background:var(--raise)}
+.lrow.sel::before{content:"▸";position:absolute;left:-2px;color:var(--ink);font-size:11px}
+/* ============ launcher: терминальная строка (research §2 input) ============
+   НЕ пилюля: промпт «›» + вдавленная строка на волосяной линии; фокус — линия 2px ink;
+   block-caret мигает; placeholder — dim в скобках «[query]» */
+.dock{height:48px;display:flex;align-items:flex-end;gap:12px;padding:0 14px 0 16px;border-top:1px solid var(--gh)}
+.dock .pr{color:var(--tx2);font-size:16px;font-weight:700;padding-bottom:8px}
+.dock .cmd{flex:1;display:flex;align-items:baseline;gap:1px;height:32px;
+  border-bottom:2px solid transparent;padding:0 6px 8px;transition:border-color 120ms var(--apple)}
+.dock .q{font-size:16px;font-weight:600;letter-spacing:.02em;color:var(--ink)}
+.dock .ph{font-size:14px;color:var(--dim);letter-spacing:.04em}
+.dock .q::after{content:"";display:inline-block;width:9px;height:17px;background:var(--ink);
+  margin-left:2px;vertical-align:-3px;animation:blink 1.15s steps(1) infinite}
+.dock .hint{padding-bottom:6px;font-size:9.5px;letter-spacing:.14em;color:var(--gh);text-transform:uppercase}
+.dock.focus .cmd{border-bottom-color:var(--ink)}     /* фокус — линией, не свечением */
+.dock:not(.focus) .cmd{border-bottom:1px solid var(--ln);padding-bottom:9px}
+@keyframes blink{50%{opacity:0}}
+
+/* ============ NOTIFICATIONS (слот C) ============ */
+.nsec .sh{display:flex;align-items:baseline;gap:8px;padding:9px 4px 6px;border-bottom:1px solid var(--gh)}
+.nsec .sh .n{font-size:9px;color:var(--gh)}
+.nrow{display:grid;grid-template-columns:32px 1fr auto;gap:10px;padding:9px 4px;border-bottom:1px solid var(--ln);cursor:default}
+.nrow:hover{background:var(--raise)}
+.nrow .nt{width:32px;height:32px;border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;color:var(--tx2)}
+.nrow .nt .ic{width:14px;height:14px}
+.nrow .su{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.nrow .bd{font-size:10.5px;color:var(--tx2);margin-top:2px}
+.nrow .tm{font-size:9.5px;color:var(--dim)}
+.nrow.dim2 .su,.nrow.dim2 .bd,.nrow.dim2 .nt{opacity:.4}
+
+/* ============ CALENDAR (без времени: дата + сетка) ============ */
+.cal-head{height:24px;display:flex;align-items:center;gap:8px;padding:0 12px;margin-top:10px}
+.cal-nav{width:22px;height:22px;border:1px solid var(--ln);color:var(--tx2);display:flex;align-items:center;justify-content:center;transition:all 80ms var(--apple)}
+.cal-nav:hover{background:var(--raise2);border-color:var(--tx2)}
+.cal-nav .ic{width:12px;height:12px}
+/* дата-заголовок: counter-номер дня занимает место бывших часов */
+.cal-dateband{display:flex;align-items:baseline;gap:12px;padding:9px 14px 7px;border-bottom:1px solid var(--ln)}
+.cal-dateband .n{font-size:40px;font-weight:700;line-height:.82;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cal-dateband .dw{display:flex;flex-direction:column;gap:4px;padding-bottom:2px}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:7px 12px 2px;margin-bottom:0}
+.dow div{text-align:center;font-size:8.5px;letter-spacing:.14em;color:var(--dim);padding:3px 0}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:24px;gap:2px;padding:0 12px}
+.cgrid .cl{position:relative;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--tx2);cursor:default}
+.cgrid .cl.out{color:var(--gh)}
+.cgrid .cl:hover{background:var(--raise)}
+.cgrid .cl.tod{background:var(--ink);color:var(--bg);font-weight:700}
+.cal-foot{display:flex;justify-content:space-between;padding:7px 14px 0;font-size:9px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+
+/* ============ STATUS BAR — кромка: три равные ячейки (REV.F · вариант V2) ============ */
+/* приборная панель: ws / lng / clk, silk-метка над tabular-значением, швы — волос-линии
+   во всю высоту; ws-ячейка инверсна — единственный акцент; hover — контур-инверсия */
+.sbar{display:flex;height:44px;align-items:stretch}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  cursor:default;transition:background 90ms var(--apple)}
+.bc+.bc{border-left:1px solid var(--gh)}
+.bc .bv{font-size:16px;font-weight:700;line-height:1;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.bc .silk{color:var(--dim)}
+.bc:hover{outline:1px solid var(--ink);outline-offset:-1px}   /* hover — контур-инверсия */
+.bc:active{background:var(--ink)}                              /* active — полная инверсия */
+.bc.inv{background:var(--ink)}
+.bc.inv .bv,.bc.inv .silk{color:var(--bg)}
+.bc.inv .silk{opacity:.55}
+.bc.inv:hover{background:var(--bg)}
+.bc.inv:hover .bv,.bc.inv:hover .silk{color:var(--bg)}
+
+/* лупа: крупный план V2 и ОСД в той же рамке */
+.bigbar{width:640px;border:1px solid var(--gh);background:var(--bg);position:relative}
+.bigbar .row{height:72px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:26px;padding:0 26px}
+.bigbar .lb2{display:flex;gap:26px;align-items:center;border-top:1px solid var(--gh);height:34px;padding:0 26px;font-size:9px}
+.bigbar .sbar{height:72px}
+.bigbar .bv{font-size:24px}
+.bigbar .silk{font-size:9px}
+.bigbar .segcol{height:34px}
+.bigbar .segcol i{height:17px}
+.bigbar .segcol i.maj{height:34px}
+.segcol{display:flex;align-items:flex-end;gap:2px;flex:1}
+.segcol i{flex:1;height:13px;background:rgba(255,255,255,.09)}
+.segcol i.maj{height:26px}
+.segcol i.f{background:var(--ink)}
+
+/* ============ BAR VARIANTS (лупа): 4 экспоната 1:1 + hover-дубли ============ */
+.bsample{width:360px;height:44px;border:1px solid var(--gh);background:var(--bg);
+  position:relative;flex:none;display:flex}
+.bsample.nar{width:300px}
+.bsample .ftb{top:-18px;left:0}
+.bsample .sbar{height:100%}
+.v1line{display:flex;align-items:center;gap:9px;height:100%;padding:0 14px;width:100%;
+  font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--ink);font-variant-numeric:tabular-nums}
+.v1line .sep{color:var(--dim)}
+.v1line .blk{background:var(--ink);color:var(--bg);padding:3px 7px 2px;margin:0 1px;font-weight:700}
+.v1line .lng{padding:3px 2px}
+.v1line .clk{padding:3px 2px}
+.v3c{width:100%;display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 18px}
+.v3c .sd{font-size:11px;color:var(--tx2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.v3c .sd i{font-style:normal;color:var(--dim);display:inline-block;width:34px}
+.v3c .ck{font-size:20px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.v3c .sd.r{text-align:right}
+.v4c{flex-direction:column}
+.v4c .sbar{height:36px;flex:1}
+.day{height:8px;width:100%;display:flex;align-items:flex-end;border-top:1px solid var(--ln)}
+.day i{flex:1;height:3px;background:rgba(255,255,255,.09)}
+.day i.q{height:6px}
+.day i.cur{background:var(--ink)}
+
+/* ============ TOAST STACK ============ */
+.tstack{position:absolute;display:flex;flex-direction:column;gap:8px}
+.toast{width:276px;background:var(--bg);border:1px solid var(--raise2);padding:12px 13px 10px;position:relative}
+.toast.cr{border-color:var(--ink)}
+.toast .tr1{display:flex;gap:11px}
+.toast .tt{width:32px;height:32px;border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;color:var(--tx2);flex:none}
+.toast .tt .ic{width:14px;height:14px}
+.toast .tc{flex:1;min-width:0;padding-right:14px}
+.toast .su2{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.toast .bd2{font-size:10px;color:var(--tx2);margin-top:2px;line-height:1.4}
+.toast .tm2{position:absolute;right:13px;bottom:8px;font-size:9px;color:var(--dim)}
+.toast .band{position:absolute;left:-1px;right:-1px;height:2px;background:var(--ink);opacity:0}
+.toast.glitch{animation:tjit 5s linear infinite}
+.toast.glitch .b1{top:22%;animation:bandA 5s linear infinite}
+.toast.glitch .b2{top:60%;animation:bandA 5s .07s linear infinite}
+@keyframes tjit{0%,1.4%{transform:translateX(-2px)}0.7%{opacity:.7}2.1%,100%{transform:none;opacity:1}}
+@keyframes bandA{0%{opacity:.9}3%{opacity:0}100%{opacity:0}}
+.toast.fold{height:26px;border:1px solid var(--gh);display:flex;align-items:center;justify-content:center;
+  font-size:10px;letter-spacing:.1em;color:var(--tx2);cursor:pointer}
+.toast.fold:hover{background:var(--raise2)}
+
+/* появление слоёв — одна orchestrated-последовательность */
+[data-in]{opacity:0;animation:rise 300ms var(--apple) forwards}
+@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  [data-in]{animation:none;opacity:1}
+  .dock .q::after{animation:none}
+  .toast.glitch,.toast.glitch .b1,.toast.glitch .b2{animation:none}
+  .toast.glitch .b1{opacity:.9}
+}
+
+/* ============ ЛУПА ============ */
+.loupe{max-width:1640px;margin:70px auto 0;padding:0 20px}
+.loupe>h2{font-size:13px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--gh);padding-bottom:12px}
+.loupe>h2 span{font-size:9.5px;color:var(--dim);font-weight:500;letter-spacing:.18em}
+.lb{display:grid;grid-template-columns:230px 1fr;border-bottom:1px solid var(--gh)}
+.lb .who{padding:28px 26px 28px 4px}
+.art{padding:28px 0;display:flex;flex-direction:column;gap:24px}
+.pair{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.art-lab{font-size:9.5px;color:var(--dim);letter-spacing:.16em;text-transform:uppercase}
+.varrow{display:flex;gap:44px;align-items:center;flex-wrap:wrap;padding:6px 0}
+.varcell{display:flex;flex-direction:column;gap:12px;align-items:flex-start;min-width:210px}
+.varcell .vh{font-size:9px;color:var(--tx2);letter-spacing:.2em;text-transform:uppercase;font-weight:600}
+.varcell .vw{font-size:9.5px;color:var(--gh);line-height:1.7;max-width:270px}
+.lb .who .id{font-size:9.5px;color:var(--gh);letter-spacing:.2em;margin-bottom:8px}
+.lb .who h3{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.lb .who p{font-size:11px;color:var(--tx2);line-height:1.65}
+.lb .who .m{margin-top:12px;font-size:9.5px;color:var(--dim);letter-spacing:.1em;line-height:2}
+
+/* крупные экспонаты */
+.bighead{width:560px;border:1px solid var(--gh);background:var(--bg);position:relative}
+.bh{height:48px;display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--gh)}
+.bh .sid{width:22px;height:22px;border:1px solid var(--gh);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--tx2)}
+.bh .t{font-size:13px;font-weight:700;letter-spacing:.26em}
+.bh .cnt{margin-left:auto;font-size:9.5px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+.bigrow{display:grid;grid-template-columns:40px 1fr auto;gap:12px;padding:14px 18px;opacity:.32}
+.bigrow.on{opacity:1}
+.bigrow .nt2{width:40px;height:40px;border:1px solid var(--ln);display:flex;align-items:center;justify-content:center;color:var(--tx2);}
+
+.bigdock{width:520px;border:1px solid var(--gh);background:var(--bg)}
+.bigdock .dock{height:58px;border-top:0}
+.bigdock .dock .pr{font-size:18px;color:var(--tx2)}
+.bigdock .q{font-size:22px}
+.bigdock .q::after{width:12px;height:23px}
+
+.biglrow{height:44px;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--ln);position:relative}
+.biglrow .tile{width:30px;height:30px;font-size:14px;border:1px solid var(--ln);color:var(--tx2);display:flex;align-items:center;justify-content:center;flex:none}
+.biglrow .nm{font-size:15px}
+.biglrow .ct{margin-left:auto;color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.biglrow.sel{background:var(--ink)}
+.biglrow.sel .nm,.biglrow.sel .ct{color:var(--bg)}
+.biglrow.sel .tile{border-color:rgba(0,0,0,.35)}
+.biglrow.sel::before{content:"▸";position:absolute;left:-4px;color:var(--ink);font-size:14px}
+.biglrow.dim .nm{color:var(--dim)}
+
+.logoutbox{width:420px;border:1px solid var(--gh);background:var(--bg)}
+.lgrid{display:flex;justify-content:center;gap:8px;padding:26px 0 8px}
+.lgrid+.lgrid{padding-top:0;padding-bottom:26px}
+.ltile{width:74px;height:74px;background:transparent;border:1px solid var(--ln);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+  color:var(--tx2);cursor:pointer;transition:border-color 90ms var(--apple),background 90ms var(--apple)}
+.ltile .ic{width:18px;height:18px}
+.ltile .tl{font-size:9.5px;letter-spacing:.18em;font-weight:600}
+.ltile:hover{border-color:var(--ink);color:var(--ink)}          /* hover — контур-инверсия */
+.ltile:active{background:var(--ink);color:var(--bg)}           /* active — полная инверсия */
+.ltile.inv{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.lfoot{height:36px;border-top:1px solid var(--gh);display:flex;align-items:center;justify-content:center;gap:10px;font-size:10.5px;color:var(--tx2)}
+
+/* storyboard open-wave */
+.story{display:flex;align-items:flex-end;gap:26px;padding:10px 4px 30px}
+.fr{position:relative;border:1px dashed rgba(255,255,255,.22);width:120px}
+.fr.solid{border-style:solid;border-color:var(--gh);background:var(--bg)}
+.fr .fl{position:absolute;left:0;bottom:-18px;font-size:8.5px;color:var(--gh);letter-spacing:.1em}
+.f1{height:26px}.f2{height:52px}.f3{height:78px}.f4{height:104px}
+.f4 .hd{position:absolute;top:0;left:0;right:0;height:14px;background:var(--raise2);border-bottom:1px solid var(--gh)}
+
+/* ============ FOOTER ============ */
+.sheet-foot{max-width:1640px;margin:64px auto 0;padding:14px 20px 0;border-top:1px solid var(--gh);
+  display:flex;justify-content:space-between;gap:30px;color:var(--dim);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase}
+.toks{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.toks .sw{display:inline-flex;gap:7px;align-items:center}
+.toks .sw i{width:11px;height:11px;border:1px solid var(--gh);display:inline-block}
+</style>
+</head>
+<body>
+
+<!-- Thin-stroke иконки, 24-сетка, эффективная толщина 1.5 — инлайн, без CDN -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-bat" viewBox="0 0 24 24"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="19" r="0.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="i-bt" viewBox="0 0 24 24"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-chl" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chr" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+</svg>
+
+<div class="sheet">
+  <span class="corner c-tl"></span><span class="corner c-tr"></span>
+  <span class="corner c-bl"></span><span class="corner c-br"></span>
+
+  <header class="masthead">
+    <h1>ARCH·UI — REV.F
+      <small>ревизия 4 · контролы как приборы · бар три ячейки · 2026-11-05</small>
+    </h1>
+    <div class="mast-rc">
+      quickshell · hyprland<br>
+      архитектура REV.D сохранена: <b>бар-кромка · три ячейки V2 · календарь date-first</b><br>
+      сетка <b>1600×900</b> · scale 1.2
+    </div>
+  </header>
+
+  <section class="manifest">
+    <div class="man"><div class="k">DND — сегмент-кнопка <i>[toggle]</i></div>
+      <p>Бегунок заменён на <b>[OFF|ON]</b>: активная половина инвертирована — состояние
+      читается позицией заливки и словом на самой кнопке, не догадкой о цвете.
+      Label «dnd» (что это) отделён от дескриптора off/on (как) — NN/g. Отвергнутые
+      варианты — в лупе. Клик 100ms, hover — контур-инверсия.</p></div>
+    <div class="man"><div class="k">Лаунчер — терминальная строка <i>[input]</i></div>
+      <p>Пилюли нет: <b>промпт «›» + строка на волосяной линии</b>, placeholder «[query]»
+      dim-ом, мигающий <b>block-caret</b>. Фокус — не свечение, а линия: underline
+      удваивается до 2px и вспыхивает до ink. Выбранная строка — полная инверсия.</p></div>
+    <div class="man"><div class="k">Шкалы — сегменты с тиками <i>[scales]</i></div>
+      <p>Все бары (sysinfo, ОСД) — <b>шкала из 20 сегментов-тиков, каждый 10-й выше</b> (50%/100%),
+      активная часть инверсией — язык ОСД из REV.D распространён на всю систему.
+      Состояние без цвета: позиция заливки + вес шрифта + инверсия (e-paper).</p></div>
+    <div class="man"><div class="k">Инверсия как единственный акцент <i>[states]</i></div>
+      <p>Hover — <b>инверсия контура</b> (border → ink), active — <b>полная инверсия</b>
+      заливки. Никаких свечений и новых alpha-смягчений: raise .05/.09 остаются только
+      на посуде (hw-строки, лупа), не на контролах. POWER-плитка по-прежнему чистая инверсия.</p></div>
+    <div class="man"><div class="k">Silk-screen аннотации <i>[bloomberg]</i></div>
+      <p>У каждого блока данных — <b>код-метка силк-скрином</b> 8px: s-01…s-04 у ячеек,
+      bus-00 у hardware, log-a1 у секций уведомлений. Метка — часть адресации прибора,
+      как на печатной плате; читается по необходимости и молчит в покое.</p></div>
+    <div class="man"><div class="k">Статус-бар — три ячейки V2 <i>[bar]</i></div>
+      <p>Бар-кромка — <b>приборная панель: ws · lng · clk</b>, три равные ячейки на
+      волос-швах во всю высоту, silk-метка над tabular-значением. LCD-часы сняты:
+      иерархию держит инверсная ws-клетка, время в центре главное. Hover ячейки —
+      контур-инверсия, полные варианты — в лупе.</p></div>
+  </section>
+</div>
+
+<div class="stage">
+  <div class="stage-head">
+    <span class="cap">main frame — все окна в кадре</span>
+    <span class="cap">sliding doors: панель выезжает волной снизу · 180ms · bezier(.22,1,.36,1)</span>
+  </div>
+
+  <div class="screen-frame">
+    <span class="frame-tag ft-top">ARCH·UI REV.F · screen 1600×900</span>
+    <span class="frame-tag ft-topr">все координаты — из реальной сетки layout</span>
+
+    <div class="screen">
+
+      <!-- ================= CALENDAR · x0024 y0024 · без часов ================= -->
+      <div class="win" data-in style="left:24px;top:24px;width:264px;height:288px;z-index:60">
+        <span class="frame-tag" style="top:-16px;left:0">cal · x0024 y0024 · 264×288 · время убрано</span>
+        <div class="cal-head">
+          <button class="cal-nav"><svg class="ic"><use href="#i-chl"/></svg></button>
+          <span class="cap2" style="font-size:11px">NOV</span>
+          <button class="cal-nav"><svg class="ic"><use href="#i-chr"/></svg></button>
+          <span class="spacer"></span>
+          <span class="cap">super+c</span>
+        </div>
+        <div class="cal-dateband">
+          <span class="n num">05</span>
+          <div class="dw">
+            <span class="cap2" style="font-size:10px">thursday</span>
+            <span class="cap">november 2026 · week 45</span>
+          </div>
+          <span class="spacer"></span>
+          <span class="cap" style="letter-spacing:.1em">d-31</span>
+        </div>
+        <div class="dow"><div>MO</div><div>TU</div><div>WE</div><div>TH</div><div>FR</div><div>SA</div><div>SU</div></div>
+        <div class="cgrid" id="calgrid"></div>
+        <div class="cal-foot"><span>iso-8601</span><span>2026·11</span></div>
+      </div>
+
+      <!-- ================= STATUS BAR · нижняя кромка, transient ================= -->
+      <div class="win" data-in style="left:620px;bottom:0;width:360px;height:44px;z-index:80">
+        <span class="frame-tag" style="top:-16px;left:0">bar · xc0800 y0856 · 360×44 · super+x · autohide 2.8s</span>
+        <div class="sbar">
+          <div class="bc inv"><span class="silk">ws</span><span class="bv">03</span></div>
+          <div class="bc"><span class="silk">lng</span><span class="bv">en</span></div>
+          <div class="bc"><span class="silk">clk</span><span class="bv">21:47</span></div>
+        </div>
+      </div>
+
+      <!-- ================= TOASTS · x1324 y0024 ================= -->
+      <div class="tstack" data-in style="left:1324px;top:24px">
+        <span class="frame-tag" style="position:absolute;top:-16px;left:0;right:0">toasts · x1324 · w276</span>
+        <div class="toast glitch">
+          <div class="tr1">
+            <div class="tt"><svg class="ic"><use href="#i-inbox"/></svg></div>
+            <div class="tc">
+              <div class="su2">pacman-sync</div>
+              <div class="bd2">40 pkgs upgraded · 0 removed · 0 broken</div>
+            </div>
+          </div>
+          <span class="tm2">2m · ×2</span>
+          <span class="x2"><svg class="ic" style="width:11px;height:11px"><use href="#i-x"/></svg></span>
+          <span class="band b1"></span><span class="band b2"></span>
+        </div>
+        <div class="toast cr">
+          <div class="tr1">
+            <div class="tt"><svg class="ic"><use href="#i-bat"/></svg></div>
+            <div class="tc">
+              <div class="su2">battery</div>
+              <div class="bd2">low battery — 12% remaining</div>
+            </div>
+          </div>
+          <span class="tm2">now</span>
+          <span class="x2"><svg class="ic" style="width:11px;height:11px"><use href="#i-x"/></svg></span>
+        </div>
+        <div class="toast fold">+3</div>
+      </div>
+
+      <!-- ================= SLOT A · SYSINFO · x0024 y0332 ================= -->
+      <div class="win" data-in style="left:24px;top:332px;width:504px;height:544px">
+        <span class="frame-tag" style="top:-16px;left:0">slot A · sysinfo · x0024 y0332</span>
+        <span class="ruler"></span><span class="ruler r"></span>
+        <div class="phead">
+          <span class="slot-id">A</span>
+          <span class="ptitle">SysInfo</span>
+          <svg class="ic" style="width:16px;height:16px;color:var(--dim)"><use href="#i-gauge"/></svg>
+          <span class="spacer"></span>
+          <span class="chip"><span class="dot"></span>up 5d 3:22</span>
+        </div>
+        <div class="pbody">
+          <div class="mgrid">
+            <div class="mcell">
+              <div class="lr"><span class="grp"><span class="cap">cpu</span><span class="silk">s-01</span></span>
+                <span class="spark"><i style="height:4px"></i><i style="height:5px"></i><i style="height:4px"></i><i style="height:6px"></i><i style="height:7px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:8px"></i><i class="hi" style="height:11px"></i><i style="height:9px"></i><i class="hi" style="height:11px"></i><i style="height:10px"></i></span>
+              </div>
+              <div class="vrow"><span class="v num">37.2</span><span class="u">%</span></div>
+              <div class="mcap">i5-1155G7 · 8T</div>
+              <div class="mbar"><span class="tscal" data-f="37"></span></div>
+            </div>
+            <div class="mcell">
+              <div class="lr"><span class="grp"><span class="cap">memory</span><span class="silk">s-02</span></span>
+                <span class="cap" style="font-size:8px;letter-spacing:.05em">RES 7.2</span>
+              </div>
+              <div class="vrow"><span class="v num">7.2/16.0</span><span class="u">G</span></div>
+              <div class="mcap">8.8 available</div>
+              <div class="mbar"><span class="tscal" data-f="45"></span></div>
+            </div>
+            <div class="mcell ghost">
+              <div class="lr"><span class="grp"><span class="cap">gpu</span><span class="silk">s-03</span></span><span class="cap" style="font-size:8px">IGP</span></div>
+              <div class="vrow"><span class="v num">iGPU</span></div>
+              <div class="mcap">iris xe · 76°</div>
+              <div class="mbar"><span class="tscal" data-f="18"></span></div>
+            </div>
+            <div class="mcell ghost">
+              <div class="lr"><span class="grp"><span class="cap">vram</span><span class="silk">s-04</span></span><span class="cap" style="font-size:8px">SHARED</span></div>
+              <div class="vrow"><span class="v num">—</span></div>
+              <div class="mcap">shared system memory</div>
+              <div class="mbar"><span class="tscal" data-f="0"></span></div>
+            </div>
+          </div>
+          <div class="hwsec">
+            <div class="h"><span class="cap2">Hardware</span><span class="silk">bus-00 · silk-screen</span><span class="spacer"></span><span class="n num">6 ROWS</span></div>
+            <div class="hw"><svg class="ic"><use href="#i-bat"/></svg><span class="l">battery</span><span class="v">87%</span><span class="m">charging</span></div>
+            <div class="hw"><svg class="ic"><use href="#i-wifi"/></svg><span class="l">network</span><span class="v">192.168.1.42</span><span class="m">wifi</span></div>
+            <div class="hw ghost"><svg class="ic"><use href="#i-shield"/></svg><span class="l">vpn</span><span class="v">off</span><span class="m">no tunnel</span></div>
+            <div class="hw"><svg class="ic"><use href="#i-bt"/></svg><span class="l">bluetooth</span><span class="v">on</span><span class="m">adapter</span></div>
+            <div class="hw"><svg class="ic"><use href="#i-cpu"/></svg><span class="l">usb</span><span class="v">2 devices</span><span class="m">bus</span></div>
+            <div class="hw"><svg class="ic"><use href="#i-cpu"/></svg><span class="l">gpu temp</span><span class="v">76°</span><span class="m">iris xe</span></div>
+          </div>
+        </div>
+        <div class="pfoot">
+          <span class="t2" style="font-size:11px">USER<span class="dim">@</span>arch</span>
+          <span class="spacer"></span>
+          <span class="cap" style="font-size:9px">x0024·y0332</span>
+          <span class="cap" style="font-size:9px">kernel 6.14-zen</span>
+        </div>
+      </div>
+
+      <!-- ================= SLOT B · LAUNCHER (супер+R) · x0548 y0332 ================= -->
+      <div class="win" data-in style="left:548px;top:332px;width:504px;height:544px">
+        <span class="frame-tag" style="top:-16px;left:0">slot B · launcher · x0548 y0332</span>
+        <span class="ruler"></span><span class="ruler r"></span>
+        <div class="slot-legend">
+          <div>super + <b class="cur">R</b> — run / launcher</div>
+          <div>super + <b>L</b> — logout / session</div>
+          <div>esc — close</div>
+        </div>
+        <div class="slot-coord">glass 48 + 4×37 · window 544</div>
+        <div class="glass" style="height:196px">
+          <div class="lrow sel"><span class="tile">F</span><span class="nm">Files</span><span class="ct">file manager</span></div>
+          <div class="lrow"><span class="tile">F</span><span class="nm">Firefox</span><span class="ct">web</span></div>
+          <div class="lrow"><span class="tile">F</span><span class="nm">File Roller</span><span class="ct">archive</span></div>
+          <div class="lrow"><span class="tile">F</span><span class="nm">Figma</span><span class="ct">design</span></div>
+          <div class="dock focus">
+            <span class="pr">›</span>
+            <span class="cmd"><span class="q">fi</span></span>
+            <span class="hint">↑↓ enter · 4/42</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SLOT C · NOTIFICATIONS · x1072 y0332 ================= -->
+      <div class="win" data-in style="left:1072px;top:332px;width:504px;height:544px">
+        <span class="frame-tag" style="top:-16px;left:0">slot C · notifications · x1072 y0332</span>
+        <span class="ruler"></span><span class="ruler r"></span>
+        <div class="phead">
+          <span class="slot-id">C</span>
+          <span class="ptitle">Notifications</span>
+          <svg class="ic" style="width:16px;height:16px;color:var(--dim)"><use href="#i-bell"/></svg>
+          <span class="spacer"></span>
+          <span class="tglab">dnd</span>
+          <span class="seg2 off" tabindex="0" role="switch" aria-label="do not disturb" aria-checked="false"><span class="s-off">off</span><span class="s-on">on</span></span>
+          <button class="btn">clear</button>
+        </div>
+        <div class="pbody" style="padding-left:18px;padding-right:14px">
+          <div class="nsec">
+            <div class="sh"><span class="cap2">today</span><span class="silk">log-a1</span><span class="spacer"></span><span class="n num">2</span></div>
+            <div class="nrow">
+              <div class="nt"><svg class="ic"><use href="#i-cpu"/></svg></div>
+              <div><div class="su">pacman</div><div class="bd">40 pkgs upgraded</div></div>
+              <span class="tm">2m</span>
+            </div>
+            <div class="nrow">
+              <div class="nt"><svg class="ic"><use href="#i-bell"/></svg></div>
+              <div><div class="su">hyprland</div><div class="bd">config reloaded · v0.57</div></div>
+              <span class="tm">18m</span>
+            </div>
+          </div>
+          <div class="nsec">
+            <div class="sh"><span class="cap2">yesterday</span><span class="silk">log-a2</span><span class="spacer"></span><span class="n num">1</span></div>
+            <div class="nrow dim2">
+              <div class="nt"><svg class="ic"><use href="#i-shield"/></svg></div>
+              <div><div class="su">borg</div><div class="bd">archive ok · 21.4G</div></div>
+              <span class="tm">1d</span>
+            </div>
+          </div>
+          <div class="spacer"></div>
+          <div class="cap" style="position:absolute;bottom:40px;right:14px">history · dnd off · 5 unread</div>
+        </div>
+        <div class="pfoot">
+          <span class="cap2" style="font-size:9px">notifstore</span>
+          <span class="spacer"></span>
+          <span class="cap" style="font-size:9px">x1072·y0332</span>
+          <span class="t2" style="font-size:11px">5 unread · dnd off</span>
+        </div>
+      </div>
+
+    </div><!-- /screen -->
+  </div><!-- /screen-frame -->
+</div><!-- /stage -->
+
+<section class="loupe">
+  <h2>Лупа — состояния
+    <span>static + hover · timings — реальные из SPEC</span>
+  </h2>
+
+  <!-- DND: выбранная сегмент-кнопка — все состояния + отвергнутые варианты -->
+  <div class="lb">
+    <div class="who">
+      <div class="id">GRID-A1 · x0560 · research §2b</div>
+      <h3>DND — сегмент-кнопка</h3>
+      <p>Взят терминальный приём <b>[OFF|ON]</b>: две половины в одном ложе, активная
+      инвертирована. Состояние читается без цвета: заливка сидит на своей половине,
+      и слово-дескриптор напечатано на самой кнопке. Label «dnd» отделён от дескриптора —
+      риска NN/g (путаница label со state) нет. Включённый DND глушит список до .32.</p>
+      <div class="m">swap 100ms · bezier apple<br>cell 27×20 · шов 1px гаснет при инверсии</div>
+    </div>
+    <div class="art">
+      <div class="pair">
+        <div class="bighead" style="width:420px">
+          <div class="bh">
+            <span class="sid">C</span><span class="t">Notifications</span>
+            <span class="cnt">dnd off · 5 unread</span>
+          </div>
+          <div class="bigrow on">
+            <div class="nt2"><svg class="ic"><use href="#i-bell"/></svg></div>
+            <div><span class="su" style="font-size:12px;font-weight:600;text-transform:uppercase">pacman</span><br><span class="t2" style="font-size:11px">40 pkgs upgraded</span></div>
+            <span class="dim" style="font-size:10px">2m</span>
+          </div>
+          <div class="bh" style="border-top:1px solid var(--gh);border-bottom:0;height:44px">
+            <span class="tglab">dnd</span>
+            <span class="seg2 off" tabindex="0"><span class="s-off">off</span><span class="s-on">on</span></span>
+            <span class="spacer"></span>
+            <button class="btn">clear</button>
+          </div>
+        </div>
+        <div class="art-lab">state: off — инверсия на левой половине, список живой</div>
+      </div>
+      <div class="pair">
+        <div class="bighead" style="width:420px">
+          <div class="bh">
+            <span class="sid" style="background:var(--ink);color:var(--bg);border-color:var(--ink)">C</span><span class="t">Notifications</span>
+            <span class="cnt">dnd on</span>
+          </div>
+          <div class="bigrow">
+            <div class="nt2"><svg class="ic"><use href="#i-bell"/></svg></div>
+            <div><span class="su" style="font-size:12px;font-weight:600;text-transform:uppercase">pacman</span><br><span class="t2" style="font-size:11px">40 pkgs upgraded</span></div>
+            <span class="dim" style="font-size:10px">2m</span>
+          </div>
+          <div class="bh" style="border-top:1px solid var(--gh);border-bottom:0;height:44px">
+            <span class="tglab" style="color:var(--ink)">dnd</span>
+            <span class="seg2 on" tabindex="0"><span class="s-off">off</span><span class="s-on">on</span></span>
+            <span class="spacer"></span>
+            <button class="btn">clear</button>
+          </div>
+        </div>
+        <div class="art-lab">state: on — инверсия переехала на правую половину, список на .32</div>
+      </div>
+      <div class="pair">
+        <div style="display:flex;align-items:center;gap:26px;padding:2px 0 4px">
+          <span class="seg2 off" tabindex="0"><span class="s-off">off</span><span class="s-on">on</span></span>
+          <span class="seg2 on hover-keep" tabindex="0" style="border-color:var(--ink)"><span class="s-off">off</span><span class="s-on">on</span></span>
+          <span class="seg2 on" tabindex="0"><span class="s-off">off</span><span class="s-on">on</span></span>
+        </div>
+        <div class="art-lab">idle off · hover (контур → ink) · state on — 3 состояния в один ряд</div>
+      </div>
+      <div class="varrow">
+        <div class="varcell">
+          <span class="vh">выбор · seg-buttons</span>
+          <span class="seg2 on" tabindex="0"><span class="s-off">off</span><span class="s-on">on</span></span>
+          <span class="vw">Слово-состояние на кнопке + позиция заливки. Bloomberg-язык, ноль двусмысленности, ложе читается как «ложа терминала». Бежавший knob не нужен — половины сами себе knob.</span>
+        </div>
+        <div class="varcell">
+          <span class="vh">отвергнуто · инверсный трек</span>
+          <span class="vtrack on"><i></i></span>
+          <span class="vw">Читаем (позиция + инверсия), но состояние off приходится угадывать по пустому треку — дескриптора нет. Оставляет «две дорожки», а не «два состояния».</span>
+        </div>
+        <div class="varcell">
+          <span class="vh">отвергнуто · радио-строка</span>
+          <span class="vradio on"><i></i> off — on <i></i></span>
+          <span class="vw">Точка-индикатор конфликтует с точками-статусами панели (chip-dot, счётчик секций). Мелкий глиф 7px теряется на чёрном.</span>
+        </div>
+        <div class="varcell">
+          <span class="vh">отвергнуто · рычажок</span>
+          <span class="vlever on"><i></i></span>
+          <span class="vw">Sync-метафора красива, но требует скос/тень — поверхность вне ч/б-токенов. Съедает место и не даёт словесного дескриптора без подписи рядом.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAUNCHER input: idle · focus · typed -->
+  <div class="lb">
+    <div class="who">
+      <div class="id">GRID-A2 · x0748 · research §2 input</div>
+      <h3>Поле лаунчера: idle → focus → typed</h3>
+      <p>Пилюля убрана. Поле — <b>терминальная строка</b>: промпт «›», вдавленная строка
+      на волосяной линии, placeholder «[query]» dim-ом. Фокус — линия: underline
+      удваивается (2px) и вспыхивает до ink — никакого свечения вокруг поля.
+      Курсор — мигающий <b>block-caret</b>. Первый символ выращивает 4 строки над доком
+      (260ms apple); выбранная строка — полная инверсия.</p>
+      <div class="m">focus-line: 1px ln → 2px ink · 120ms<br>caret blink 1.15s steps(1)<br>stage2: 260ms · apple</div>
+    </div>
+    <div class="art" style="flex-direction:row;gap:44px;flex-wrap:wrap;align-items:flex-start;padding:34px 0 4px">
+      <div class="pair">
+        <div class="bigdock" style="width:340px">
+          <div class="dock">
+            <span class="pr">›</span>
+            <span class="cmd"><span class="ph">[query]</span></span>
+            <span class="hint" style="color:var(--gh)">super+r</span>
+          </div>
+        </div>
+        <div class="art-lab">idle — поле на волосяной 1px, placeholder dim</div>
+      </div>
+      <div class="pair">
+        <div class="bigdock" style="width:340px">
+          <div class="dock focus">
+            <span class="pr">›</span>
+            <span class="cmd"><span class="q"></span></span>
+            <span class="hint">↑↓ enter · 42</span>
+          </div>
+        </div>
+        <div class="art-lab">focus, пустой ввод — caret стоит, линия 2px ink</div>
+      </div>
+      <div class="pair">
+        <div class="bigdock" style="width:340px">
+          <div class="biglrow sel"><span class="tile">F</span><span class="nm">Files</span><span class="ct">file manager</span></div>
+          <div class="biglrow"><span class="tile">F</span><span class="nm">Firefox</span><span class="ct">web</span></div>
+          <div class="dock focus">
+            <span class="pr">›</span>
+            <span class="cmd"><span class="q">fi</span></span>
+            <span class="hint">4/42</span>
+          </div>
+        </div>
+        <div class="art-lab">typed «fi» — список вырос, выбранная строка инвертирована</div>
+      </div>
+      <div class="pair">
+        <div class="bigdock" style="width:340px">
+          <div class="biglrow dim" style="color:var(--dim)">no matches</div>
+          <div class="dock focus">
+            <span class="pr">›</span>
+            <span class="cmd"><span class="q">zz</span></span>
+          </div>
+        </div>
+        <div class="art-lab">пустой результат — dim, без пустых обещаний</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST glitch -->
+  <div class="lb">
+    <div class="who">
+      <div class="id">GRID-A3 · x1324</div>
+      <h3>Тост с глитчем</h3>
+      <p>Фирменный приём сохранён: appear-flicker, x-jitter ±2px и две инверсные полосы, которые простреливают карту. В кадре — момент разрыва; полосы видны у верхнего тоста на экране.</p>
+      <div class="m">flicker 60ms · jitter ±2px<br>band A @40ms · band B @105ms<br>итого 200ms · без шейдера</div>
+    </div>
+    <div class="art">
+      <div class="pair">
+        <div class="toast glitch" style="width:340px;transform:scale(1.25);transform-origin:left center;margin-right:70px">
+          <div class="tr1">
+            <div class="tt"><svg class="ic"><use href="#i-inbox"/></svg></div>
+            <div class="tc">
+              <div class="su2">pacman-sync</div>
+              <div class="bd2">40 pkgs upgraded · 0 removed</div>
+            </div>
+          </div>
+          <span class="tm2">2m · ×2</span>
+          <span class="x2"><svg class="ic" style="width:11px;height:11px"><use href="#i-x"/></svg></span>
+          <span class="band b1"></span><span class="band b2"></span>
+        </div>
+        <div class="art-lab">обычный · рамка raise2 · таймер прилип внизу</div>
+      </div>
+      <div class="pair">
+        <div class="toast cr" style="width:340px;transform:scale(1.25);transform-origin:left center;margin-right:70px">
+          <div class="tr1">
+            <div class="tt"><svg class="ic"><use href="#i-bat"/></svg></div>
+            <div class="tc">
+              <div class="su2">battery</div>
+              <div class="bd2">low battery — 12% remaining</div>
+            </div>
+          </div>
+          <span class="tm2">now</span>
+        </div>
+        <div class="art-lab">critical — рамка ink · без таймаута</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAR states: normal + OSD crossfade -->
+  <div class="lb">
+    <div class="who">
+      <div class="id">GRID-A4 · xc0800 y0856</div>
+      <h3>Бар: обычное и ОСД-состояние</h3>
+      <p>ОСД не отдельное окно — это <b>второе состояние того же бара</b>. Триггер громкости/яркости
+      кроссфейдит содержимое (130ms): три ячейки ws · lng · clk уступают место
+      шкале-линейке и tabular-счётчику %. Двойной триггер — пульс цифр, возврат к обычному
+      состоянию — по таймауту autoload с содержимым.</p>
+      <div class="m">swap 130ms · pulse 130ms · 240 сегментов · sysfs poll 300ms</div>
+    </div>
+    <div class="art" style="display:flex;flex-direction:column;gap:26px;align-items:flex-start;padding:24px 0 4px">
+      <div>
+        <div class="bigbar">
+          <div class="sbar">
+            <div class="bc inv"><span class="silk">ws</span><span class="bv">03</span></div>
+            <div class="bc"><span class="silk">lng</span><span class="bv">en</span></div>
+            <div class="bc"><span class="silk">clk</span><span class="bv">21:47</span></div>
+          </div>
+          <div class="lb2"><span>state: idle</span><span class="spacer" style="flex:1"></span><span>super+x · autohide 2.8s · y0856</span></div>
+        </div>
+        <div class="art-lab">обычное состояние — три ячейки, ws-клетка инверсна, время в центре главное</div>
+      </div>
+      <div>
+        <div class="bigbar">
+          <div class="row" style="grid-template-columns:auto 1fr auto">
+            <svg class="ic" style="width:22px;height:22px;color:var(--tx2)"><use href="#i-sun"/></svg>
+            <span class="segcol" id="osdseg" aria-hidden="true"></span>
+            <span class="num" style="font-size:24px;font-weight:700;font-variant-numeric:tabular-nums">64<span class="cap" style="margin-left:6px">%</span></span>
+          </div>
+          <div class="lb2"><span>state: osd / brightness · intel_backlight</span><span style="flex:1"></span><span>0.64 · 29481/46061</span></div>
+        </div>
+        <div class="art-lab">ОСД-состояние — та же рамка, шкала-линейка вместо состава · crossfade 130ms</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS SPECIMEN: чекбоксы · шкалы · инверсии -->
+  <div class="lb">
+    <div class="who">
+      <div class="id">GRID-A6 · system-wide</div>
+      <h3>Чекбоксы · шкалы · инверсии</h3>
+      <p>E-paper-правило из research: состояние — весом, заливкой, инверсией и геометрией,
+      не цветом. Чекбокс, если появятся фильтры, — <b>контур → инверсный квадрат</b>
+      (метка ч/б остаётся читаемой), indeterminate — тире. Шкалы везде — сегменты с
+      тиками, каждый 10-й выше; hover любого контрола — контур-инверсия, active —
+      полная инверсия.</p>
+      <div class="m">checkbox 14px · tick-cycle 10<br>maj каждые 10% · swap 90–100ms</div>
+    </div>
+    <div class="art">
+      <div class="varrow" style="gap:52px">
+        <div class="varcell" style="min-width:200px">
+          <span class="vh">checkbox · если появятся фильтры</span>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <span style="display:flex;align-items:center;gap:10px"><span class="ck"></span><span class="cap2" style="font-size:9px">off</span></span>
+            <span style="display:flex;align-items:center;gap:10px"><span class="ck on">✕</span><span class="cap2" style="font-size:9px">on — инверсный квадрат</span></span>
+            <span style="display:flex;align-items:center;gap:10px"><span class="ck ind"></span><span class="cap2" style="font-size:9px">indeterminate — тире</span></span>
+          </div>
+        </div>
+        <div class="varcell" style="min-width:300px;flex:1">
+          <span class="vh">шкала-сегменты + шелк-скрин · sysinfo</span>
+          <div style="padding:4px 0 2px"><span class="tscal" data-f="37" style="height:10px"></span></div>
+          <span style="display:flex;justify-content:space-between;padding-top:6px"><span class="silk">s-01 · cpu · 20-seg</span><span class="silk">37%</span></span>
+          <div class="vw" style="margin-top:10px">20 сегментов, каждый 10-й выше — тики на 50% и 100%; активные — инверсией. Устный счёт без сетки — продолжение ОСД-языка REV.D, теперь системного.</div>
+        </div>
+        <div class="varcell" style="min-width:240px">
+          <span class="vh">кнопки · hover → active</span>
+          <div style="display:flex;gap:14px;align-items:center;padding:6px 0">
+            <button class="btn">clear</button>
+            <button class="btn" style="border-color:var(--ink);color:var(--ink)">hover</button>
+            <button class="btn" style="background:var(--ink);color:var(--bg);border-color:var(--ink)">active</button>
+          </div>
+          <div class="vw">idle · hover (контур-инверсия) · active (полная инверсия) — один язык на всё: seg2, кнопки, плитки logout.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGOUT hover -->
+  <div class="lb" style="border-bottom:0">
+    <div class="who">
+      <div class="id">GRID-A5 · x0548</div>
+      <h3>Logout · hover плитки</h3>
+      <p>Плитки сессии. Hover — контур-инверсия, active — полная инверсия; POWER — инверсия по умолчанию: единственный «акцент» системы зарезервирован за самой серьёзной кнопкой. halt-фейд перед reboot/power оставлен.</p>
+      <div class="m">halt-fade → systemctl reboot/poweroff<br>grid 3 + 2 · tile 74px</div>
+    </div>
+    <div class="art" style="justify-content:flex-start;gap:60px">
+      <div class="logoutbox">
+        <div class="bh"><span class="sid">B</span><span class="t">Logout</span><span class="cnt">session</span></div>
+        <div class="lgrid">
+          <div class="ltile"><svg class="ic"><use href="#i-lock"/></svg><span class="tl">lock</span></div>
+          <div class="ltile"><svg class="ic"><use href="#i-moon"/></svg><span class="tl">sleep</span></div>
+          <div class="ltile" style="border-color:var(--ink);color:var(--ink)"><svg class="ic"><use href="#i-logout"/></svg><span class="tl">exit</span></div>
+        </div>
+        <div class="lgrid">
+          <div class="ltile"><svg class="ic"><use href="#i-rotate"/></svg><span class="tl">reboot</span></div>
+          <div class="ltile inv"><svg class="ic"><use href="#i-power"/></svg><span class="tl">power</span></div>
+        </div>
+        <div class="lfoot"><span>USER</span><span class="dim">·</span><span>up 5d 3:22</span></div>
+      </div>
+      <div class="story">
+        <div class="fr f1"><span class="fl">ghost t0</span></div>
+        <div class="fr f2"><span class="fl">t+40ms</span></div>
+        <div class="fr f3"><span class="fl">t+96ms</span></div>
+        <div class="fr f4 solid"><div class="hd"></div><span class="fl">t+180ms · open</span></div>
+        <div style="align-self:center">
+          <div class="cap2" style="margin-bottom:8px">open-wave</div>
+          <div class="cap">панель выходит волной снизу, ghost-контур<br>опрежает стекло · 180ms · apple</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAR VARIANTS: V1–V4 1:1 на чёрном · RECOMMENDED = V2 -->
+  <div class="lb" style="border-bottom:0">
+    <div class="who">
+      <div class="id">GRID-A7 · xc0800 y0856 · design-proposal</div>
+      <h3>Бары — варианты V1–V4</h3>
+      <p>Бар-кромка в четырёх прочтениях, все 1:1 (360×44 на чёрном, hairline-рамка).
+      LCD-часы сняты во всех: время — tabular, единственный акцент — инверсия ws-клетки.
+      <b>RECOMMENDED — V2</b>: три равные ячейки дают осевую симметрию, время в центре
+      главное, silk-метки делают прибор читаемым без догадки. Справа от каждого экспоната —
+      hover одной ячейки (контур-инверсия).</p>
+      <div class="m">bar 360×44 · osx 620 · шов 1px gh · swap 100ms<br>v3: 300px · clock 20px tabular<br>v4: day-шкала 24 тика · тик-позиции инверсный</div>
+    </div>
+    <div class="art">
+      <div class="pair">
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div class="bsample">
+            <span class="frame-tag ftb">bar V1 · statusline</span>
+            <div class="v1line"><span>ws</span><span class="blk">03</span><span class="sep">·</span><span>en</span><span class="sep">·</span><span>21:47</span></div>
+          </div>
+          <div class="bsample">
+            <span class="frame-tag ftb">bar V1 · hover</span>
+            <div class="v1line"><span>ws</span><span class="blk" style="outline:1px solid var(--ink);outline-offset:-1px">03</span><span class="sep">·</span><span>en</span><span class="sep">·</span><span>21:47</span></div>
+          </div>
+        </div>
+        <div class="art-lab">v1 · statusline — одна строка tabular, ws-номер инверсной клеткой, LCD полностью снят.</div>
+      </div>
+      <div class="pair">
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div class="bsample">
+            <span class="frame-tag ftb">bar V2 · RECOMMENDED</span>
+            <div class="sbar">
+              <div class="bc inv"><span class="silk">ws</span><span class="bv">03</span></div>
+              <div class="bc"><span class="silk">lng</span><span class="bv">en</span></div>
+              <div class="bc"><span class="silk">clk</span><span class="bv">21:47</span></div>
+            </div>
+          </div>
+          <div class="bsample">
+            <span class="frame-tag ftb">bar V2 · hover</span>
+            <div class="sbar">
+              <div class="bc inv"><span class="silk">ws</span><span class="bv">03</span></div>
+              <div class="bc" style="outline:1px solid var(--ink);outline-offset:-1px"><span class="silk">lng</span><span class="bv">en</span></div>
+              <div class="bc"><span class="silk">clk</span><span class="bv">21:47</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="art-lab">v2 · приборная панель — три равные ячейки на волос-швах, осевая симметрия, время в центре главное.</div>
+      </div>
+      <div class="pair">
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div class="bsample nar">
+            <span class="frame-tag ftb">bar V3 · axis</span>
+            <div class="v3c">
+              <span class="sd"><i>ws</i>03</span>
+              <span class="ck">21:47</span>
+              <span class="sd r"><i>lang</i>en</span>
+            </div>
+          </div>
+          <div class="bsample nar">
+            <span class="frame-tag ftb">bar V3 · hover</span>
+            <div class="v3c">
+              <span class="sd" style="outline:1px solid var(--ink);outline-offset:-1px"><i>ws</i>03</span>
+              <span class="ck">21:47</span>
+              <span class="sd r"><i>lang</i>en</span>
+            </div>
+          </div>
+        </div>
+        <div class="art-lab">v3 · ось — узкий 300px, зеркальные dim-префиксы равной ширины, время 20px tabular главное.</div>
+      </div>
+      <div class="pair">
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div class="bsample v4c">
+            <span class="frame-tag ftb">bar V4 · osc-edge</span>
+            <div class="sbar">
+              <div class="bc inv"><span class="silk">ws</span><span class="bv">03</span></div>
+              <div class="bc"><span class="silk">lng</span><span class="bv">en</span></div>
+              <div class="bc"><span class="silk">clk</span><span class="bv">21:47</span></div>
+            </div>
+            <div class="day"><i></i><i></i><i></i><i class="q"></i><i></i><i></i><i></i><i class="q"></i><i></i><i></i><i></i><i class="q"></i><i></i><i></i><i></i><i class="q"></i><i></i><i></i><i></i><i class="q"></i><i></i><i class="cur"></i><i></i><i></i></div>
+          </div>
+          <div class="bsample v4c">
+            <span class="frame-tag ftb">bar V4 · hover</span>
+            <div class="sbar">
+              <div class="bc inv"><span class="silk">ws</span><span class="bv">03</span></div>
+              <div class="bc" style="outline:1px solid var(--ink);outline-offset:-1px"><span class="silk">lng</span><span class="bv">en</span></div>
+              <div class="bc"><span class="silk">clk</span><span class="bv">21:47</span></div>
+            </div>
+            <div class="day"><i></i><i></i><i></i><i class="q"></i><i></i><i></i><i></i><i class="q"></i><i></i><i></i><i></i><i class="q"></i><i></i><i></i><i></i><i class="q"></i><i></i><i></i><i></i><i class="q"></i><i></i><i class="cur"></i><i></i><i></i></div>
+          </div>
+        </div>
+        <div class="art-lab">v4 · осциллографическая кромка — мини-шкала суток 24тик, дублирует позицию часов · фича, не баг.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="sheet-foot">
+  <div class="toks">
+    <span class="sw"><i style="background:#000"></i>000000</span>
+    <span class="sw"><i style="background:#f4f4f5"></i>f4f4f5</span>
+    <span class="sw"><i style="background:#a1a1aa"></i>a1a1aa</span>
+    <span class="sw"><i style="background:#56565e"></i>56565e</span>
+    <span class="sw"><i style="background:#3f3f46"></i>3f3f46</span>
+    <span class="sw">raise .05/.09 · inv = f4f4f5/000000</span>
+  </div>
+  <div>motion: open 180 · swap 130 · glitch 200 · dnd 100 · bezier(.22,1,.36,1)</div>
+  <div>arch·ui rev.f · sheet 1/1 · самодостаточный html · без cdn</div>
+</footer>
+
+<script>
+/* ---------- calendário: сетка ноября 2026, старт недели — понедельник ---------- */
+(function(){
+  var grid=document.getElementById('calgrid');
+  var first=new Date(2026,10,1);
+  var lead=(first.getDay()+6)%7;              // сколько дней предыдущего месяца
+  var start=new Date(2026,10,1-lead);
+  var today=5;
+  var html='';
+  for(var i=0;i<42;i++){
+    var d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+    var out=d.getMonth()!==10;
+    var isT=!out&&d.getDate()===today;
+    var wk=(!out&&(d.getDate()-1)%7===0)?'data-w="W'+(Math.ceil((((d-new Date(d.getFullYear(),0,1))/864e5)+1)/7))+'"':'';
+    html+='<div class="cl'+(out?' out':'')+(isT?' tod':'')+'" '+wk+'>'+d.getDate()+'</div>';
+  }
+  grid.innerHTML=html;
+})();
+
+/* ---------- шкалы .tscal: 20 сегментов с тиками, каждый 10-й выше (50%/100%), fill по data-f ---------- */
+(function(){
+  var els=document.querySelectorAll('.tscal');
+  for(var i=0;i<els.length;i++){
+    var f=parseInt(els[i].getAttribute('data-f'),10)||0, html='';
+    for(var j=0;j<20;j++){
+      var on=j<Math.round(f/5);
+      html+='<i class="'+((j%10===9)?'mj ':'')+(on?'f':'')+'"></i>';
+    }
+    els[i].innerHTML=html;
+  }
+})();
+
+/* ---------- OSD «полупиг»: 60 колонок, каждая 4-я — высокая, заполнение 64% ---------- */
+(function(){
+  var el=document.getElementById('osdseg');
+  var N=60,fill=0.64,maj=10,html='';
+  for(var i=0;i<N;i++){
+    var on=i<fill*N;
+    html+='<i class="'+((i+1)%maj===0?'maj ':'')+(on?'f':'')+'"></i>';
+  }
+  el.innerHTML=html;
+})();
+</script>
+</body>
+</html>

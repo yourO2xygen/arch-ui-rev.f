@@ -18,7 +18,7 @@
 //
 // Использование (shell.qml):
 //   Panel {
-//       slot: "A"; panels: ["docker", "taskmgr"]
+//       slot: "A"; panels: ["sysinfo"]
 //       WlrLayershell.namespace: "archui:col-a"
 //       anchors { left: true; top: true }; margins.left: 24; margins.top: 332
 //       implicitWidth: 504; implicitHeight: 544
@@ -126,14 +126,17 @@ PanelWindow {
 
         // Поверхность. Task 25: стекло приклеено к низу окна с высотой _glassH
         // (overlay-панели растят стекло сами, не ресайзя окно). −1 = всё окно.
-        // ⚠ QTBUG-137166: у прозрачного Rect не трогать border → border.width: 0.
+        // Волосяная рамка 1px Theme.ghost по контуру блока — как .win в макете
+        // REV.F (border:1px solid var(--gh)). ⚠ QTBUG-137166: у прозрачного Rect
+        // не трогать border — здесь Rect НЕ прозрачный (Theme.surface), безопасно.
         Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             height: panel._glassH >= 0 ? panel._glassH : parent.height
             color: Theme.surface
-            border.width: 0
+            border.width: 1
+            border.color: Theme.ghost
         }
 
         // Ghost-эхо: 2 контурных Rect 1px Theme.ghostLine (ANALYSIS §3.2).

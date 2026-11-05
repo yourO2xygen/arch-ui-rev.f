@@ -2,13 +2,15 @@
 // Лаунчер приложений (слот B, panelId "launcher", оверлей на всё окно слота —
 // kit/Panel.overlay). Две стадии (Task 24 → Task 25: окно фиксированной высоты
 // hSlotB, растёт только видимое стекло glassH — дрожь анимации высоты окна убрана):
-//   1 — dock Theme.hDock у нижней кромки слота = всё видимое стекло (Kit.Field,
-//       placeholder «run…», каретка 3×2); список появляется НАД dock; высота
-//       ОКНА уже фикс Theme.hSlotB, но стекло/маска = dock only (glassH);
+//   1 — dock Theme.hDock у нижней кромки слота = всё видимое стекло (Kit.Field —
+//       терминальная строка REV.F: промпт «›», волосяная линия под вводом,
+//       placeholder «[query]», block-caret); список появляется НАД dock;
+//       высота ОКНА уже фикс Theme.hSlotB, но стекло/маска = dock only (glassH);
 //   2 — список dock + 4 строки (4×hRowL=140) растёт вверх от дока
 //       (Motion.launcherGrow 260ms, apple) по первому символу или ↑↓;
 //       Строки hRowL: плитка-инициал 24, имя, категория dim справа; выбранная —
-//       inset-маркер 2px. «no matches» — dim. Список показывает до 4 строк.
+//       полная инверсия с маркером «▸», hover — контур-инверсия. «no matches»
+//       — dim. Список показывает до 4 строк.
 // Фильтр — подстрока (case-insensitive) по имени DesktopEntries (noDisplay=false).
 // ↑↓ — циклическая навигация, Enter — вспышка строки + Quickshell.execDetached +
 // закрытие лаунчера. Esc — закрыть. keyboardFocus Exclusive / HyprlandFocusGrab —
@@ -159,8 +161,8 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: root.dockH
-        placeholder: "run…"
-        // caret: узкая засечка по умолчанию kit/Field (3×2) — 9×2 накладывалась на глиф
+        placeholder: "[query]"
+        // промпт «›», линия-фокус и block-caret — внутри kit/Field (REV.F GRID-A2)
         fontPx: Theme.fs12
 
         onTextEdited: (t) => root.query = t
@@ -208,20 +210,30 @@ Item {
                 readonly property bool selected: index === root.selected
                 readonly property bool flashing: index === root._flashIndex
 
-                // Плитка-инициал 24 (иконки по дизайну не нужны)
+                // выбранная — ПОЛНАЯ инверсия (макет .lrow.sel; бывший inset-маркер
+                // 2px снят), декларируем первой — полоса ложится под контент
+                Rectangle {
+                    anchors.fill: parent
+                    color: Theme.invBg
+                    visible: row.selected
+                }
+
+                // Плитка-инициал 24 (иконки по дизайну не нужны); на инверсной
+                // строке — прозрачная с чёрным полуконтуром (border rgba(0,0,0,.35))
                 Rectangle {
                     id: tile
                     x: 10
                     anchors.verticalCenter: parent.verticalCenter
                     width: root.tileS
                     height: root.tileS
-                    color: Theme.raise
-                    border.width: 0
+                    color: row.selected ? "transparent" : Theme.raise
+                    border.width: row.selected ? 1 : 0
+                    border.color: Qt.rgba(0, 0, 0, 0.35)
 
                     Text {
                         anchors.centerIn: parent
                         text: (row.modelData.name ? row.modelData.name : row.modelData.id).charAt(0).toUpperCase()
-                        color: Theme.txt2
+                        color: row.selected ? Theme.invFg : Theme.txt2
                         font.family: Theme.font
                         font.pixelSize: Theme.fs11
                         font.weight: Font.Medium
@@ -235,7 +247,7 @@ Item {
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.name ? row.modelData.name : row.modelData.id
-                    color: Theme.txt
+                    color: row.selected ? Theme.invFg : Theme.txt
                     font.family: Theme.font
                     font.pixelSize: Theme.fs11   // DESIGN «11.5» — pixelSize int в Qt; округлено вниз
                     elide: Text.ElideRight
@@ -251,25 +263,31 @@ Item {
                           ? row.modelData.genericName
                           : (row.modelData.categories && row.modelData.categories.length > 0
                              ? row.modelData.categories[0] : "")
-                    color: Theme.dim
+                    color: row.selected ? Theme.invFg : Theme.dim
                     font.family: Theme.font
                     font.pixelSize: Theme.fs9
                     elide: Text.ElideRight
                 }
 
-                // selected — inset-маркер 2px
-                Rectangle {
-                    x: 0
-                    width: 2
-                    height: parent.height
-                    color: Theme.txt
+                // маркер выбранной строки «▸» (макет .lrow.sel::before; ListView
+                // клипует наружу — ставим внутрь полосы, инверсией)
+                Text {
+                    x: 2
+                    anchors.verticalCenter: parent.verticalCenter
                     visible: row.selected
+                    text: "▸"
+                    color: Theme.invFg
+                    font.family: Theme.font
+                    font.pixelSize: Theme.fs9
                 }
 
-                // hover (клик мыши по строке тоже запускает)
+                // hover — контур-инверсия (REV.F: контур → ink, без заливки);
+                // клик мыши по строке тоже запускает
                 Rectangle {
                     anchors.fill: parent
-                    color: Theme.raise
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Theme.txt
                     visible: hover.hovered && !row.selected
                 }
                 HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
